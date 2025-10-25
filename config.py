@@ -10,7 +10,7 @@ class ProgressiveConfig:
     
     # Base configuration
     DEVICE = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
-    DATA_ROOT = "./data"
+    DATA_ROOT = "/content/data"
     SAVE_DIR = "./progressive_models"
     
     # Additional attributes for notebook compatibility
