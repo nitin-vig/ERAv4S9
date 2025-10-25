@@ -569,49 +569,6 @@ def get_imagenet_mini_dataset():
     
     return train_dataset, test_dataset
 
-def get_fallback_dataset(dataset_name="imagenette"):
-    """Get fallback dataset using torchvision's built-in datasets"""
-    print(f"🔄 Using fallback dataset for {dataset_name}...")
-    
-    # Get dataset config
-    dataset_config = Config.get_dataset_config()
-    
-    # Create transforms
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(dataset_config["image_size"]),
-        transforms.ToTensor(),
-        transforms.Normalize(dataset_config["mean"], dataset_config["std"])
-    ])
-    
-    if dataset_name == "imagenette":
-        # Use CIFAR-10 as fallback for ImageNette (10 classes)
-        print("Using CIFAR-10 as fallback (10 classes)")
-        train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
-        test_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-    elif dataset_name == "tiny_imagenet":
-        # Use CIFAR-100 as fallback for Tiny ImageNet (200 classes -> 100 classes)
-        print("Using CIFAR-100 as fallback (100 classes)")
-        train_dataset = datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
-        test_dataset = datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
-    else:
-        # Use FakeData for other datasets
-        print("Using FakeData as fallback")
-        train_dataset = datasets.FakeData(
-            size=10000, 
-            image_size=(3, dataset_config["image_size"], dataset_config["image_size"]), 
-            num_classes=dataset_config["num_classes"], 
-            transform=transform
-        )
-        test_dataset = datasets.FakeData(
-            size=2000, 
-            image_size=(3, dataset_config["image_size"], dataset_config["image_size"]), 
-            num_classes=dataset_config["num_classes"], 
-            transform=transform
-        )
-    
-    return train_dataset, test_dataset
-
 def get_data_loaders(dataset_name="imagenette"):
     """Get data loaders for the specified dataset"""
     
@@ -619,27 +576,20 @@ def get_data_loaders(dataset_name="imagenette"):
     torch.manual_seed(Config.SEED if hasattr(Config, 'SEED') else 1)
     
     # Try to get dataset
-    try:
-        if dataset_name == "imagenet":
-            train_dataset, test_dataset = get_imagenet_dataset()
-        elif dataset_name == "imagenet_mini":
-            train_dataset, test_dataset = get_imagenet_mini_dataset()
-        elif dataset_name == "tiny_imagenet":
-            train_dataset, test_dataset = get_tiny_imagenet_dataset()
-        elif dataset_name == "imagenette":
-            train_dataset, test_dataset = get_imagenette_dataset()
-        else:
-            raise ValueError(f"Unknown dataset: {dataset_name}")
-        
-        # Check if datasets are empty
-        if len(train_dataset) == 0 or len(test_dataset) == 0:
-            print("⚠️  Dataset is empty, using fallback...")
-            train_dataset, test_dataset = get_fallback_dataset(dataset_name)
-            
-    except Exception as e:
-        print(f"⚠️  Error loading {dataset_name}: {e}")
-        print("Using fallback dataset...")
-        train_dataset, test_dataset = get_fallback_dataset(dataset_name)
+    if dataset_name == "imagenet":
+        train_dataset, test_dataset = get_imagenet_dataset()
+    elif dataset_name == "imagenet_mini":
+        train_dataset, test_dataset = get_imagenet_mini_dataset()
+    elif dataset_name == "tiny_imagenet":
+        train_dataset, test_dataset = get_tiny_imagenet_dataset()
+    elif dataset_name == "imagenette":
+        train_dataset, test_dataset = get_imagenette_dataset()
+    else:
+        raise ValueError(f"Unknown dataset: {dataset_name}")
+    
+    # Check if datasets are empty
+    if len(train_dataset) == 0 or len(test_dataset) == 0:
+        raise RuntimeError(f"Dataset '{dataset_name}' is empty. Please download the dataset first.")
     
     # DataLoader arguments
     dataloader_args = {
