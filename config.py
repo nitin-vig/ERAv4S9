@@ -77,40 +77,6 @@ class ProgressiveConfig:
         }
     }
     
-    # Additional stages for experimentation
-    EXPERIMENTAL_STAGES = {
-        "cifar10": {
-            "dataset": "cifar10",
-            "classes": 10,
-            "image_size": 32,
-            "epochs": 15,
-            "batch_size": 128,
-            "lr": 0.001,
-            "optimizer": "adamw",
-            "scheduler": "cosine",
-            "weight_decay": 1e-4,
-            "label_smoothing": 0.1,
-            "description": "CIFAR-10 warmup stage",
-            "enabled": False,
-            "priority": 0
-        },
-        "cifar100": {
-            "dataset": "cifar100",
-            "classes": 100,
-            "image_size": 32,
-            "epochs": 25,
-            "batch_size": 128,
-            "lr": 0.0008,
-            "optimizer": "adamw",
-            "scheduler": "cosine",
-            "weight_decay": 1e-4,
-            "label_smoothing": 0.1,
-            "description": "CIFAR-100 medium stage",
-            "enabled": False,
-            "priority": 1.5
-        }
-    }
-    
     # Data loading configuration
     DATA_LOADING = {
         "num_workers": 4,
@@ -180,8 +146,7 @@ class ProgressiveConfig:
     @classmethod
     def get_enabled_stages(cls):
         """Get list of enabled stages in priority order"""
-        all_stages = {**cls.STAGES, **cls.EXPERIMENTAL_STAGES}
-        enabled_stages = {k: v for k, v in all_stages.items() if v.get("enabled", True)}
+        enabled_stages = {k: v for k, v in cls.STAGES.items() if v.get("enabled", True)}
         return sorted(enabled_stages.items(), key=lambda x: x[1]["priority"])
     
     @classmethod
@@ -189,8 +154,6 @@ class ProgressiveConfig:
         """Get configuration for specific stage"""
         if stage_name in cls.STAGES:
             return cls.STAGES[stage_name]
-        elif stage_name in cls.EXPERIMENTAL_STAGES:
-            return cls.EXPERIMENTAL_STAGES[stage_name]
         else:
             raise ValueError(f"Unknown stage: {stage_name}")
     
@@ -199,8 +162,6 @@ class ProgressiveConfig:
         """Enable a specific stage"""
         if stage_name in cls.STAGES:
             cls.STAGES[stage_name]["enabled"] = True
-        elif stage_name in cls.EXPERIMENTAL_STAGES:
-            cls.EXPERIMENTAL_STAGES[stage_name]["enabled"] = True
         else:
             raise ValueError(f"Unknown stage: {stage_name}")
     
@@ -209,24 +170,20 @@ class ProgressiveConfig:
         """Disable a specific stage"""
         if stage_name in cls.STAGES:
             cls.STAGES[stage_name]["enabled"] = False
-        elif stage_name in cls.EXPERIMENTAL_STAGES:
-            cls.EXPERIMENTAL_STAGES[stage_name]["enabled"] = False
         else:
             raise ValueError(f"Unknown stage: {stage_name}")
     
     @classmethod
     def add_custom_stage(cls, stage_name, config):
         """Add a custom training stage"""
-        cls.EXPERIMENTAL_STAGES[stage_name] = config
-        print(f"Custom stage '{stage_name}' added to experimental stages")
+        cls.STAGES[stage_name] = config
+        print(f"Custom stage '{stage_name}' added to stages")
     
     @classmethod
     def modify_stage_config(cls, stage_name, **kwargs):
         """Modify configuration for specific stage"""
         if stage_name in cls.STAGES:
             cls.STAGES[stage_name].update(kwargs)
-        elif stage_name in cls.EXPERIMENTAL_STAGES:
-            cls.EXPERIMENTAL_STAGES[stage_name].update(kwargs)
         else:
             raise ValueError(f"Unknown stage: {stage_name}")
     
@@ -361,3 +318,6 @@ if __name__ == "__main__":
     print("\nExample: Using quick experiment preset")
     quick_config = PresetConfigs.quick_experiment()
     quick_config.print_config()
+
+# Alias for backwards compatibility
+Config = ProgressiveConfig
