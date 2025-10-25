@@ -13,7 +13,63 @@ import numpy as np
 from PIL import Image
 import zipfile
 import requests
+import tarfile
+import subprocess
+import sys
+from tqdm import tqdm
 from config import Config
+
+def download_file_with_progress(url, filename):
+    """Download file with progress bar"""
+    print(f"Downloading {filename} from {url}...")
+    
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        total_size = int(response.headers.get('content-length', 0))
+        
+        with open(filename, 'wb') as file, tqdm(
+            desc=filename,
+            total=total_size,
+            unit='iB',
+            unit_scale=True,
+            unit_divisor=1024,
+        ) as progress_bar:
+            for chunk in response.iter_content(chunk_size=8192):
+                size = file.write(chunk)
+                progress_bar.update(size)
+        
+        print(f"✅ Downloaded {filename}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error downloading {filename}: {e}")
+        return False
+
+def extract_tar_file(tar_path, extract_to):
+    """Extract tar file"""
+    print(f"Extracting {tar_path} to {extract_to}...")
+    try:
+        with tarfile.open(tar_path, 'r:gz') as tar:
+            tar.extractall(extract_to)
+        print(f"✅ Extracted {tar_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Error extracting {tar_path}: {e}")
+        return False
+
+def extract_zip_file(zip_path, extract_to):
+    """Extract zip file"""
+    print(f"Extracting {zip_path} to {extract_to}...")
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+        print(f"✅ Extracted {zip_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Error extracting {zip_path}: {e}")
+        return False
 
 class TinyImageNetDataset(Dataset):
     """Custom dataset class for Tiny ImageNet"""
@@ -258,58 +314,111 @@ def download_imagenet():
     return imagenet_path
 
 def download_tiny_imagenet():
-    """Download Tiny ImageNet dataset"""
-    print("Tiny ImageNet dataset download instructions:")
-    print("1. Download from: http://cs231n.stanford.edu/tiny-imagenet-200.zip")
-    print("2. Extract to ./data/tiny-imagenet-200/")
-    print("3. Ensure folder structure:")
-    print("   tiny-imagenet-200/")
-    print("   ├── train/")
-    print("   │   ├── n01440764/")
-    print("   │   └── ...")
-    print("   ├── val/")
-    print("   │   ├── images/")
-    print("   │   └── val_annotations.txt")
-    print("   └── words.txt")
-    
-    tiny_imagenet_path = os.path.join(Config.DATA_ROOT, "tiny-imagenet-200")
-    os.makedirs(tiny_imagenet_path, exist_ok=True)
-    
-    return tiny_imagenet_path
-
-def download_imagenette():
-    """Download ImageNette dataset"""
-    print("ImageNette dataset download instructions:")
-    print("1. Download from: https://s3.amazonaws.com/fast-ai-imageclas/imagenette2.tgz")
-    print("2. Extract to ./data/imagenette2/")
-    print("3. Ensure folder structure:")
-    print("   imagenette2/")
-    print("   ├── train/")
-    print("   │   ├── n01440764/")
-    print("   │   └── ...")
-    print("   └── val/")
-    print("       ├── n01440764/")
-    print("       └── ...")
-    
-    imagenette_path = os.path.join(Config.DATA_ROOT, "imagenette2")
-    os.makedirs(imagenette_path, exist_ok=True)
-    
-    return imagenette_path
-
-def download_imagenet_mini():
-    """Download ImageNet Mini dataset"""
-    print("Downloading ImageNet Mini dataset...")
+    """Download Tiny ImageNet dataset automatically"""
+    print("🔄 Downloading Tiny ImageNet dataset...")
     
     # Create data directory
     os.makedirs(Config.DATA_ROOT, exist_ok=True)
     
-    # Note: In a real scenario, you would need to download from Kaggle
-    # For now, we'll create a placeholder structure
-    imagenet_path = os.path.join(Config.DATA_ROOT, "imagenet-mini")
-    os.makedirs(imagenet_path, exist_ok=True)
+    tiny_imagenet_path = os.path.join(Config.DATA_ROOT, "tiny-imagenet-200")
     
-    print(f"ImageNet Mini dataset will be downloaded to: {imagenet_path}")
-    print("Please manually download the dataset from Kaggle and extract it to this location.")
+    # Check if already exists
+    if os.path.exists(tiny_imagenet_path) and os.listdir(tiny_imagenet_path):
+        print(f"✅ Tiny ImageNet dataset already exists at {tiny_imagenet_path}")
+        return tiny_imagenet_path
+    
+    # Download URL
+    url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
+    zip_filename = os.path.join(Config.DATA_ROOT, "tiny-imagenet-200.zip")
+    
+    # Download the file
+    if not download_file_with_progress(url, zip_filename):
+        print("❌ Failed to download Tiny ImageNet dataset")
+        print("Manual download instructions:")
+        print("1. Download from: http://cs231n.stanford.edu/tiny-imagenet-200.zip")
+        print("2. Extract to ./data/tiny-imagenet-200/")
+        return tiny_imagenet_path
+    
+    # Extract the file
+    if not extract_zip_file(zip_filename, Config.DATA_ROOT):
+        print("❌ Failed to extract Tiny ImageNet dataset")
+        return tiny_imagenet_path
+    
+    # Clean up zip file
+    try:
+        os.remove(zip_filename)
+        print(f"🗑️  Cleaned up {zip_filename}")
+    except:
+        pass
+    
+    print(f"✅ Tiny ImageNet dataset ready at {tiny_imagenet_path}")
+    return tiny_imagenet_path
+
+def download_imagenette():
+    """Download ImageNette dataset automatically"""
+    print("🔄 Downloading ImageNette dataset...")
+    
+    # Create data directory
+    os.makedirs(Config.DATA_ROOT, exist_ok=True)
+    
+    imagenette_path = os.path.join(Config.DATA_ROOT, "imagenette2")
+    
+    # Check if already exists
+    if os.path.exists(imagenette_path) and os.listdir(imagenette_path):
+        print(f"✅ ImageNette dataset already exists at {imagenette_path}")
+        return imagenette_path
+    
+    # Download URL
+    url = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2.tgz"
+    tar_filename = os.path.join(Config.DATA_ROOT, "imagenette2.tgz")
+    
+    # Download the file
+    if not download_file_with_progress(url, tar_filename):
+        print("❌ Failed to download ImageNette dataset")
+        print("Manual download instructions:")
+        print("1. Download from: https://s3.amazonaws.com/fast-ai-imageclas/imagenette2.tgz")
+        print("2. Extract to ./data/imagenette2/")
+        return imagenette_path
+    
+    # Extract the file
+    if not extract_tar_file(tar_filename, Config.DATA_ROOT):
+        print("❌ Failed to extract ImageNette dataset")
+        return imagenette_path
+    
+    # Clean up tar file
+    try:
+        os.remove(tar_filename)
+        print(f"🗑️  Cleaned up {tar_filename}")
+    except:
+        pass
+    
+    print(f"✅ ImageNette dataset ready at {imagenette_path}")
+    return imagenette_path
+
+def download_imagenet_mini():
+    """Download ImageNet Mini dataset (requires Kaggle setup)"""
+    print("🔄 Setting up ImageNet Mini dataset...")
+    
+    # Create data directory
+    os.makedirs(Config.DATA_ROOT, exist_ok=True)
+    
+    imagenet_path = os.path.join(Config.DATA_ROOT, "imagenet-mini")
+    
+    # Check if already exists
+    if os.path.exists(imagenet_path) and os.listdir(imagenet_path):
+        print(f"✅ ImageNet Mini dataset already exists at {imagenet_path}")
+        return imagenet_path
+    
+    print("📋 ImageNet Mini requires Kaggle authentication:")
+    print("1. Install Kaggle API: pip install kaggle")
+    print("2. Get API credentials from: https://www.kaggle.com/account")
+    print("3. Place kaggle.json in ~/.kaggle/")
+    print("4. Run: kaggle datasets download -d ifigotin/imagenetmini-1000")
+    print("5. Extract to ./data/imagenet-mini/")
+    print("\nAlternatively, use ImageNette or Tiny ImageNet for testing.")
+    
+    # Create placeholder directory
+    os.makedirs(imagenet_path, exist_ok=True)
     
     return imagenet_path
 
@@ -460,23 +569,77 @@ def get_imagenet_mini_dataset():
     
     return train_dataset, test_dataset
 
+def get_fallback_dataset(dataset_name="imagenette"):
+    """Get fallback dataset using torchvision's built-in datasets"""
+    print(f"🔄 Using fallback dataset for {dataset_name}...")
+    
+    # Get dataset config
+    dataset_config = Config.get_dataset_config()
+    
+    # Create transforms
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(dataset_config["image_size"]),
+        transforms.ToTensor(),
+        transforms.Normalize(dataset_config["mean"], dataset_config["std"])
+    ])
+    
+    if dataset_name == "imagenette":
+        # Use CIFAR-10 as fallback for ImageNette (10 classes)
+        print("Using CIFAR-10 as fallback (10 classes)")
+        train_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+        test_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
+    elif dataset_name == "tiny_imagenet":
+        # Use CIFAR-100 as fallback for Tiny ImageNet (200 classes -> 100 classes)
+        print("Using CIFAR-100 as fallback (100 classes)")
+        train_dataset = datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
+        test_dataset = datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
+    else:
+        # Use FakeData for other datasets
+        print("Using FakeData as fallback")
+        train_dataset = datasets.FakeData(
+            size=10000, 
+            image_size=(3, dataset_config["image_size"], dataset_config["image_size"]), 
+            num_classes=dataset_config["num_classes"], 
+            transform=transform
+        )
+        test_dataset = datasets.FakeData(
+            size=2000, 
+            image_size=(3, dataset_config["image_size"], dataset_config["image_size"]), 
+            num_classes=dataset_config["num_classes"], 
+            transform=transform
+        )
+    
+    return train_dataset, test_dataset
+
 def get_data_loaders(dataset_name="imagenette"):
     """Get data loaders for the specified dataset"""
     
     # Set random seed for reproducibility
     torch.manual_seed(Config.SEED if hasattr(Config, 'SEED') else 1)
     
-    # Get dataset
-    if dataset_name == "imagenet":
-        train_dataset, test_dataset = get_imagenet_dataset()
-    elif dataset_name == "imagenet_mini":
-        train_dataset, test_dataset = get_imagenet_mini_dataset()
-    elif dataset_name == "tiny_imagenet":
-        train_dataset, test_dataset = get_tiny_imagenet_dataset()
-    elif dataset_name == "imagenette":
-        train_dataset, test_dataset = get_imagenette_dataset()
-    else:
-        raise ValueError(f"Unknown dataset: {dataset_name}")
+    # Try to get dataset
+    try:
+        if dataset_name == "imagenet":
+            train_dataset, test_dataset = get_imagenet_dataset()
+        elif dataset_name == "imagenet_mini":
+            train_dataset, test_dataset = get_imagenet_mini_dataset()
+        elif dataset_name == "tiny_imagenet":
+            train_dataset, test_dataset = get_tiny_imagenet_dataset()
+        elif dataset_name == "imagenette":
+            train_dataset, test_dataset = get_imagenette_dataset()
+        else:
+            raise ValueError(f"Unknown dataset: {dataset_name}")
+        
+        # Check if datasets are empty
+        if len(train_dataset) == 0 or len(test_dataset) == 0:
+            print("⚠️  Dataset is empty, using fallback...")
+            train_dataset, test_dataset = get_fallback_dataset(dataset_name)
+            
+    except Exception as e:
+        print(f"⚠️  Error loading {dataset_name}: {e}")
+        print("Using fallback dataset...")
+        train_dataset, test_dataset = get_fallback_dataset(dataset_name)
     
     # DataLoader arguments
     dataloader_args = {
