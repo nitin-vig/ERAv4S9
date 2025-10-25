@@ -18,6 +18,7 @@ class ProgressiveConfig:
     MODEL_NAME = "resnet50"
     MOUNT_DRIVE = False
     DRIVE_MODEL_PATH = "/content/drive/MyDrive/models"
+
     
     # Training stages configuration
     STAGES = {
@@ -204,6 +205,32 @@ class ProgressiveConfig:
             cls.STAGES[stage_name].update(kwargs)
         else:
             raise ValueError(f"Unknown stage: {stage_name}")
+    
+    @classmethod
+    def update_for_dataset(cls, dataset_name):
+        """Update configuration for a specific dataset (for backward compatibility)"""
+        if dataset_name not in cls.STAGES:
+            print(f"⚠️  Unknown dataset: {dataset_name}, using default configuration")
+            raise TypeError(f"⚠️  Unknown dataset: {dataset_name}, using default configuration") 
+        
+        stage_config = cls.get_stage_config(dataset_name)
+        
+        # Update class attributes for backward compatibility with old code
+        cls.DATASET_NAME = dataset_name
+        cls.IMAGE_SIZE = stage_config.get("image_size")
+        cls.NUM_CLASSES = stage_config.get("classes")
+        cls.BATCH_SIZE = stage_config.get("batch_size")
+        cls.NUM_EPOCHS = stage_config.get("epochs")
+        cls.LEARNING_RATE = stage_config.get("lr")
+        cls.WEIGHT_DECAY = stage_config.get("weight_decay")
+        cls.SEED = 42
+        
+        print(f"Configuration updated for {dataset_name}")
+        print(f"Image size: {cls.IMAGE_SIZE}")
+        print(f"Number of classes: {cls.NUM_CLASSES}")
+        print(f"Batch size: {cls.BATCH_SIZE}")
+        print(f"Epochs: {cls.NUM_EPOCHS}")
+        print(f"Learning rate: {cls.LEARNING_RATE}")
     
     @classmethod
     def print_config(cls):
