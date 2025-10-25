@@ -1,0 +1,27 @@
+# Requirements for Progressive ImageNet Training Strategy
+# Install with: pip install -r requirements.txt
+
+# Core PyTorch dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Data processing and visualization
+numpy>=1.21.0
+matplotlib>=3.5.0
+Pillow>=8.0.0
+tqdm>=4.60.0
+
+# Data augmentation
+albumentations>=1.3.0
+
+# HTTP requests for dataset downloads
+requests>=2.25.0
+
+# Optional: Google Colab support
+# google-colab  # Uncomment if running in Colab
+
+# Optional: Additional utilities
+# tensorboard>=2.8.0  # For advanced logging
+# wandb>=0.12.0       # For experiment tracking
+# opencv-python>=4.5.0  # For additional image processing
