@@ -13,6 +13,12 @@ class ProgressiveConfig:
     DATA_ROOT = "./data"
     SAVE_DIR = "./progressive_models"
     
+    # Additional attributes for notebook compatibility
+    SAVE_MODEL_PATH = "./models"
+    MODEL_NAME = "resnet50"
+    MOUNT_DRIVE = False
+    DRIVE_MODEL_PATH = "/content/drive/MyDrive/models"
+    
     # Training stages configuration
     STAGES = {
         "imagenette": {
@@ -156,6 +162,18 @@ class ProgressiveConfig:
             return cls.STAGES[stage_name]
         else:
             raise ValueError(f"Unknown stage: {stage_name}")
+    
+    @classmethod
+    def get_dataset_config(cls, dataset_name=None):
+        """Get dataset configuration (alias for get_stage_config for compatibility)"""
+        if dataset_name is None:
+            # Return first enabled stage as default
+            enabled_stages = cls.get_enabled_stages()
+            if enabled_stages:
+                return enabled_stages[0][1]
+            else:
+                return cls.STAGES["imagenette"]  # fallback
+        return cls.get_stage_config(dataset_name)
     
     @classmethod
     def enable_stage(cls, stage_name):
