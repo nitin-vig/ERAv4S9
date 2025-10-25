@@ -1,151 +1,363 @@
 """
-Configuration file for ImageNet training with ResNet50
+Configuration file for Progressive ImageNet Training Strategy
+Easy customization of training parameters and stages
 """
 
 import os
 
-class Config:
-    """Configuration class for multiple ImageNet variants training"""
+class ProgressiveConfig:
+    """Configuration class for progressive training strategy"""
     
-    # Dataset Configuration
-    DATASET_NAME = "imagenette"  # Options: "imagenet", "imagenet_mini", "tiny_imagenet", "imagenette"
-    DATA_ROOT = "./data"
-    
-    # Dataset paths
-    IMAGENET_PATH = os.path.join(DATA_ROOT, "imagenet")
-    IMAGENET_MINI_PATH = os.path.join(DATA_ROOT, "imagenet-mini")
-    TINY_IMAGENET_PATH = os.path.join(DATA_ROOT, "tiny-imagenet-200")
-    IMAGENETTE_PATH = os.path.join(DATA_ROOT, "imagenette2")
-    
-    # Dataset URLs
-    IMAGENET_MINI_URL = "https://www.kaggle.com/datasets/ifigotin/imagenetmini-1000/download?datasetVersionNumber=1"
-    TINY_IMAGENET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-    IMAGENETTE_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2.tgz"
-    
-    # Default image dimensions (will be overridden by dataset config)
-    IMAGE_SIZE = 224
-    NUM_CLASSES = 1000
-    
-    # Data augmentation settings
-    MEAN = (0.485, 0.456, 0.406)  # ImageNet normalization
-    STD = (0.229, 0.224, 0.225)
-    
-    # Training Configuration (will be adjusted per dataset)
-    BATCH_SIZE = 128  # Default batch size
-    NUM_EPOCHS = 50  # Default epochs
-    LEARNING_RATE = 0.001  # Default learning rate
-    WEIGHT_DECAY = 1e-4
-    
-    # Model Configuration
-    MODEL_NAME = "resnet50"
-    PRETRAINED = False  # Use custom implementation
-    
-    # Training settings
-    NUM_WORKERS = 4  # Default workers
-    PIN_MEMORY = True
-    
-    # Scheduler settings
-    SCHEDULER_PATIENCE = 3
-    SCHEDULER_FACTOR = 0.5
-    SCHEDULER_MIN_LR = 1e-4
-    
-    # Device settings
+    # Base configuration
     DEVICE = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"
+    DATA_ROOT = "./data"
+    SAVE_DIR = "./progressive_models"
     
-    # Logging and saving
-    SAVE_MODEL_PATH = "./models"
-    LOG_INTERVAL = 50
+    # Training stages configuration
+    STAGES = {
+        "imagenette": {
+            "dataset": "imagenette",
+            "classes": 10,
+            "image_size": 224,
+            "epochs": 20,
+            "batch_size": 64,
+            "lr": 0.001,
+            "optimizer": "adamw",
+            "scheduler": "cosine",
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.1,
+            "description": "Quick warmup and architecture validation",
+            "enabled": True,
+            "priority": 1
+        },
+        "tiny_imagenet": {
+            "dataset": "tiny_imagenet",
+            "classes": 200,
+            "image_size": 64,
+            "epochs": 30,
+            "batch_size": 128,
+            "lr": 0.0005,
+            "optimizer": "adamw",
+            "scheduler": "cosine",
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.1,
+            "description": "Medium complexity training",
+            "enabled": True,
+            "priority": 2
+        },
+        "imagenet_mini": {
+            "dataset": "imagenet_mini",
+            "classes": 1000,
+            "image_size": 224,
+            "epochs": 40,
+            "batch_size": 96,
+            "lr": 0.0003,
+            "optimizer": "sgd",
+            "scheduler": "step",
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.1,
+            "description": "Full ImageNet complexity with subset data",
+            "enabled": True,
+            "priority": 3
+        },
+        "imagenet": {
+            "dataset": "imagenet",
+            "classes": 1000,
+            "image_size": 224,
+            "epochs": 60,
+            "batch_size": 128,
+            "lr": 0.1,
+            "optimizer": "sgd",
+            "scheduler": "step",
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.1,
+            "description": "Final full-scale training",
+            "enabled": True,
+            "priority": 4
+        }
+    }
     
-    # Colab specific settings
-    COLAB_MODE = False  # Set to True for Colab environment
-    MOUNT_DRIVE = True
-    DRIVE_MODEL_PATH = "/content/drive/MyDrive/imagenet_models"
+    # Additional stages for experimentation
+    EXPERIMENTAL_STAGES = {
+        "cifar10": {
+            "dataset": "cifar10",
+            "classes": 10,
+            "image_size": 32,
+            "epochs": 15,
+            "batch_size": 128,
+            "lr": 0.001,
+            "optimizer": "adamw",
+            "scheduler": "cosine",
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.1,
+            "description": "CIFAR-10 warmup stage",
+            "enabled": False,
+            "priority": 0
+        },
+        "cifar100": {
+            "dataset": "cifar100",
+            "classes": 100,
+            "image_size": 32,
+            "epochs": 25,
+            "batch_size": 128,
+            "lr": 0.0008,
+            "optimizer": "adamw",
+            "scheduler": "cosine",
+            "weight_decay": 1e-4,
+            "label_smoothing": 0.1,
+            "description": "CIFAR-100 medium stage",
+            "enabled": False,
+            "priority": 1.5
+        }
+    }
+    
+    # Data loading configuration
+    DATA_LOADING = {
+        "num_workers": 4,
+        "pin_memory": True,
+        "persistent_workers": True,
+        "prefetch_factor": 2
+    }
+    
+    # Training configuration
+    TRAINING = {
+        "mixed_precision": True,
+        "gradient_clipping": 1.0,
+        "early_stopping_patience": 10,
+        "save_best_only": True,
+        "monitor_metric": "val_acc",
+        "monitor_mode": "max"
+    }
+    
+    # Logging configuration
+    LOGGING = {
+        "log_interval": 50,
+        "save_interval": 5,
+        "plot_interval": 1,
+        "verbose": True,
+        "log_level": "INFO"
+    }
+    
+    # Model configuration
+    MODEL = {
+        "architecture": "resnet50",
+        "pretrained": False,
+        "freeze_backbone": False,
+        "dropout_rate": 0.0,
+        "batch_norm_momentum": 0.1
+    }
+    
+    # Augmentation configuration
+    AUGMENTATION = {
+        "train": {
+            "resize": 256,
+            "crop": 224,
+            "horizontal_flip": True,
+            "vertical_flip": False,
+            "rotation": 0,
+            "color_jitter": {
+                "brightness": 0.2,
+                "contrast": 0.2,
+                "saturation": 0.2,
+                "hue": 0.1
+            },
+            "normalize": {
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225]
+            }
+        },
+        "val": {
+            "resize": 256,
+            "crop": 224,
+            "horizontal_flip": False,
+            "normalize": {
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225]
+            }
+        }
+    }
     
     @classmethod
-    def get_dataset_config(cls):
-        """Get dataset specific configuration"""
-        if cls.DATASET_NAME == "imagenet":
-            return {
-                "image_size": 224,
-                "num_classes": 1000,
-                "mean": cls.MEAN,
-                "std": cls.STD,
-                "batch_size": 256,
-                "epochs": 90,
-                "lr": 0.1,
-                "optimizer": "sgd",
-                "scheduler": "step"
-            }
-        elif cls.DATASET_NAME == "imagenet_mini":
-            return {
-                "image_size": 224,
-                "num_classes": 1000,
-                "mean": cls.MEAN,
-                "std": cls.STD,
-                "batch_size": 128,
-                "epochs": 50,
-                "lr": 0.001,
-                "optimizer": "adamw",
-                "scheduler": "reduce_lr"
-            }
-        elif cls.DATASET_NAME == "tiny_imagenet":
-            return {
-                "image_size": 64,
-                "num_classes": 200,
-                "mean": cls.MEAN,
-                "std": cls.STD,
-                "batch_size": 128,
-                "epochs": 50,
-                "lr": 0.001,
-                "optimizer": "adamw",
-                "scheduler": "reduce_lr"
-            }
-        elif cls.DATASET_NAME == "imagenette":
-            return {
-                "image_size": 224,
-                "num_classes": 10,
-                "mean": cls.MEAN,
-                "std": cls.STD,
-                "batch_size": 64,
-                "epochs": 30,
-                "lr": 0.001,
-                "optimizer": "adamw",
-                "scheduler": "reduce_lr"
-            }
+    def get_enabled_stages(cls):
+        """Get list of enabled stages in priority order"""
+        all_stages = {**cls.STAGES, **cls.EXPERIMENTAL_STAGES}
+        enabled_stages = {k: v for k, v in all_stages.items() if v.get("enabled", True)}
+        return sorted(enabled_stages.items(), key=lambda x: x[1]["priority"])
+    
+    @classmethod
+    def get_stage_config(cls, stage_name):
+        """Get configuration for specific stage"""
+        if stage_name in cls.STAGES:
+            return cls.STAGES[stage_name]
+        elif stage_name in cls.EXPERIMENTAL_STAGES:
+            return cls.EXPERIMENTAL_STAGES[stage_name]
         else:
-            raise ValueError(f"Unknown dataset: {cls.DATASET_NAME}")
+            raise ValueError(f"Unknown stage: {stage_name}")
     
     @classmethod
-    def update_for_dataset(cls, dataset_name):
-        """Update configuration for specific dataset"""
-        cls.DATASET_NAME = dataset_name
-        dataset_config = cls.get_dataset_config()
-        
-        # Update training parameters
-        cls.BATCH_SIZE = dataset_config["batch_size"]
-        cls.NUM_EPOCHS = dataset_config["epochs"]
-        cls.LEARNING_RATE = dataset_config["lr"]
-        
-        # Update image size and classes
-        cls.IMAGE_SIZE = dataset_config["image_size"]
-        cls.NUM_CLASSES = dataset_config["num_classes"]
-        
-        print(f"Configuration updated for {dataset_name}")
-        print(f"Image size: {cls.IMAGE_SIZE}")
-        print(f"Number of classes: {cls.NUM_CLASSES}")
-        print(f"Batch size: {cls.BATCH_SIZE}")
-        print(f"Epochs: {cls.NUM_EPOCHS}")
-        print(f"Learning rate: {cls.LEARNING_RATE}")
+    def enable_stage(cls, stage_name):
+        """Enable a specific stage"""
+        if stage_name in cls.STAGES:
+            cls.STAGES[stage_name]["enabled"] = True
+        elif stage_name in cls.EXPERIMENTAL_STAGES:
+            cls.EXPERIMENTAL_STAGES[stage_name]["enabled"] = True
+        else:
+            raise ValueError(f"Unknown stage: {stage_name}")
     
     @classmethod
-    def update_for_colab(cls):
-        """Update configuration for Colab environment"""
-        cls.COLAB_MODE = True
-        cls.BATCH_SIZE = min(cls.BATCH_SIZE, 32)  # Reduce batch size for Colab
-        cls.NUM_WORKERS = 2
-        cls.DATA_ROOT = "/content/data"
-        cls.SAVE_MODEL_PATH = "/content/models"
+    def disable_stage(cls, stage_name):
+        """Disable a specific stage"""
+        if stage_name in cls.STAGES:
+            cls.STAGES[stage_name]["enabled"] = False
+        elif stage_name in cls.EXPERIMENTAL_STAGES:
+            cls.EXPERIMENTAL_STAGES[stage_name]["enabled"] = False
+        else:
+            raise ValueError(f"Unknown stage: {stage_name}")
+    
+    @classmethod
+    def add_custom_stage(cls, stage_name, config):
+        """Add a custom training stage"""
+        cls.EXPERIMENTAL_STAGES[stage_name] = config
+        print(f"Custom stage '{stage_name}' added to experimental stages")
+    
+    @classmethod
+    def modify_stage_config(cls, stage_name, **kwargs):
+        """Modify configuration for specific stage"""
+        if stage_name in cls.STAGES:
+            cls.STAGES[stage_name].update(kwargs)
+        elif stage_name in cls.EXPERIMENTAL_STAGES:
+            cls.EXPERIMENTAL_STAGES[stage_name].update(kwargs)
+        else:
+            raise ValueError(f"Unknown stage: {stage_name}")
+    
+    @classmethod
+    def print_config(cls):
+        """Print current configuration"""
+        print("Progressive Training Configuration")
+        print("=" * 40)
         
-        # Create directories if they don't exist
-        os.makedirs(cls.DATA_ROOT, exist_ok=True)
-        os.makedirs(cls.SAVE_MODEL_PATH, exist_ok=True)
+        print(f"Device: {cls.DEVICE}")
+        print(f"Data Root: {cls.DATA_ROOT}")
+        print(f"Save Directory: {cls.SAVE_DIR}")
+        
+        print("\nEnabled Stages:")
+        enabled_stages = cls.get_enabled_stages()
+        for stage_name, config in enabled_stages:
+            print(f"  {stage_name}: {config['description']}")
+            print(f"    Classes: {config['classes']}, Epochs: {config['epochs']}, LR: {config['lr']}")
+        
+        print(f"\nModel: {cls.MODEL['architecture']}")
+        print(f"Mixed Precision: {cls.TRAINING['mixed_precision']}")
+        print(f"Early Stopping Patience: {cls.TRAINING['early_stopping_patience']}")
+
+# Preset configurations for different use cases
+class PresetConfigs:
+    """Preset configurations for different training scenarios"""
+    
+    @staticmethod
+    def quick_experiment():
+        """Configuration for quick experiments"""
+        config = ProgressiveConfig()
+        
+        # Reduce epochs for quick testing
+        config.modify_stage_config("imagenette", epochs=5)
+        config.modify_stage_config("tiny_imagenet", epochs=10)
+        config.modify_stage_config("imagenet_mini", epochs=15)
+        config.modify_stage_config("imagenet", epochs=20)
+        
+        # Reduce batch sizes for memory efficiency
+        config.modify_stage_config("imagenette", batch_size=32)
+        config.modify_stage_config("tiny_imagenet", batch_size=64)
+        config.modify_stage_config("imagenet_mini", batch_size=48)
+        config.modify_stage_config("imagenet", batch_size=64)
+        
+        return config
+    
+    @staticmethod
+    def high_accuracy():
+        """Configuration optimized for maximum accuracy"""
+        config = ProgressiveConfig()
+        
+        # Increase epochs for better convergence
+        config.modify_stage_config("imagenette", epochs=30)
+        config.modify_stage_config("tiny_imagenet", epochs=50)
+        config.modify_stage_config("imagenet_mini", epochs=60)
+        config.modify_stage_config("imagenet", epochs=90)
+        
+        # Use larger batch sizes
+        config.modify_stage_config("imagenette", batch_size=128)
+        config.modify_stage_config("tiny_imagenet", batch_size=256)
+        config.modify_stage_config("imagenet_mini", batch_size=192)
+        config.modify_stage_config("imagenet", batch_size=256)
+        
+        # Enable additional regularization
+        config.modify_stage_config("imagenette", weight_decay=1e-3)
+        config.modify_stage_config("tiny_imagenet", weight_decay=1e-3)
+        config.modify_stage_config("imagenet_mini", weight_decay=1e-3)
+        config.modify_stage_config("imagenet", weight_decay=1e-3)
+        
+        return config
+    
+    @staticmethod
+    def memory_efficient():
+        """Configuration for memory-constrained environments"""
+        config = ProgressiveConfig()
+        
+        # Small batch sizes
+        config.modify_stage_config("imagenette", batch_size=16)
+        config.modify_stage_config("tiny_imagenet", batch_size=32)
+        config.modify_stage_config("imagenet_mini", batch_size=24)
+        config.modify_stage_config("imagenet", batch_size=32)
+        
+        # Reduce data loading workers
+        config.DATA_LOADING["num_workers"] = 2
+        config.DATA_LOADING["prefetch_factor"] = 1
+        
+        # Enable gradient accumulation
+        config.TRAINING["gradient_accumulation_steps"] = 4
+        
+        return config
+    
+    @staticmethod
+    def fast_training():
+        """Configuration optimized for speed"""
+        config = ProgressiveConfig()
+        
+        # Reduce epochs
+        config.modify_stage_config("imagenette", epochs=10)
+        config.modify_stage_config("tiny_imagenet", epochs=20)
+        config.modify_stage_config("imagenet_mini", epochs=25)
+        config.modify_stage_config("imagenet", epochs=40)
+        
+        # Larger batch sizes for faster training
+        config.modify_stage_config("imagenette", batch_size=128)
+        config.modify_stage_config("tiny_imagenet", batch_size=256)
+        config.modify_stage_config("imagenet_mini", batch_size=192)
+        config.modify_stage_config("imagenet", batch_size=256)
+        
+        # Higher learning rates
+        config.modify_stage_config("imagenette", lr=0.002)
+        config.modify_stage_config("tiny_imagenet", lr=0.001)
+        config.modify_stage_config("imagenet_mini", lr=0.0006)
+        config.modify_stage_config("imagenet", lr=0.2)
+        
+        return config
+
+# Example usage
+if __name__ == "__main__":
+    # Print default configuration
+    config = ProgressiveConfig()
+    config.print_config()
+    
+    print("\n" + "="*50)
+    print("Preset Configurations Available:")
+    print("1. ProgressiveConfig() - Default configuration")
+    print("2. PresetConfigs.quick_experiment() - Quick testing")
+    print("3. PresetConfigs.high_accuracy() - Maximum accuracy")
+    print("4. PresetConfigs.memory_efficient() - Memory constrained")
+    print("5. PresetConfigs.fast_training() - Speed optimized")
+    
+    # Example of using presets
+    print("\nExample: Using quick experiment preset")
+    quick_config = PresetConfigs.quick_experiment()
+    quick_config.print_config()
