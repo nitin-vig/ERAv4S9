@@ -425,6 +425,11 @@ def download_imagenet_mini():
 def get_albumentations_transforms(dataset_config, is_training=True):
     """Get Albumentations transforms for data augmentation"""
     
+    # Get mean and std from AUGMENTATION config
+    norm_key = "train" if is_training else "val"
+    mean = Config.AUGMENTATION[norm_key]["normalize"]["mean"]
+    std = Config.AUGMENTATION[norm_key]["normalize"]["std"]
+    
     if is_training:
         transform = A.Compose([
             A.Resize(dataset_config["image_size"], dataset_config["image_size"]),
@@ -440,18 +445,18 @@ def get_albumentations_transforms(dataset_config, is_training=True):
                     max_width=16,
                     min_height=8,
                     min_width=8,
-                    fill_value=tuple([int(x * 255) for x in dataset_config["mean"]]),
+                    fill_value=tuple([int(x * 255) for x in mean]),
                     p=0.75
                 ),
                 A.GaussNoise(var_limit=(10.0, 50.0), p=0.25),
             ], p=0.5),
-            A.Normalize(mean=dataset_config["mean"], std=dataset_config["std"]),
+            A.Normalize(mean=mean, std=std),
             ToTensorV2(),
         ])
     else:
         transform = A.Compose([
             A.Resize(dataset_config["image_size"], dataset_config["image_size"]),
-            A.Normalize(mean=dataset_config["mean"], std=dataset_config["std"]),
+            A.Normalize(mean=mean, std=std),
             ToTensorV2(),
         ])
     
@@ -460,19 +465,24 @@ def get_albumentations_transforms(dataset_config, is_training=True):
 def get_torchvision_transforms(dataset_config, is_training=True):
     """Get torchvision transforms for data augmentation"""
     
+    # Get mean and std from AUGMENTATION config
+    norm_key = "train" if is_training else "val"
+    mean = Config.AUGMENTATION[norm_key]["normalize"]["mean"]
+    std = Config.AUGMENTATION[norm_key]["normalize"]["std"]
+    
     if is_training:
         transform = transforms.Compose([
             transforms.Resize((dataset_config["image_size"], dataset_config["image_size"])),
             transforms.RandomCrop(dataset_config["image_size"], padding=4),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToTensor(),
-            transforms.Normalize(mean=dataset_config["mean"], std=dataset_config["std"])
+            transforms.Normalize(mean=mean, std=std)
         ])
     else:
         transform = transforms.Compose([
             transforms.Resize((dataset_config["image_size"], dataset_config["image_size"])),
             transforms.ToTensor(),
-            transforms.Normalize(mean=dataset_config["mean"], std=dataset_config["std"])
+            transforms.Normalize(mean=mean, std=std)
         ])
     
     return transform
@@ -625,8 +635,11 @@ def visualize_samples(data_loader, num_samples=12):
         # Denormalize for visualization
         img = batch_data[i]
         if img.min() < 0:  # If normalized
-            img = img * torch.tensor(Config.get_dataset_config()["std"]).view(3, 1, 1) + \
-                  torch.tensor(Config.get_dataset_config()["mean"]).view(3, 1, 1)
+            # Get mean and std from AUGMENTATION config (use val config for visualization)
+            mean = Config.AUGMENTATION["val"]["normalize"]["mean"]
+            std = Config.AUGMENTATION["val"]["normalize"]["std"]
+            img = img * torch.tensor(std).view(3, 1, 1) + \
+                  torch.tensor(mean).view(3, 1, 1)
             img = torch.clamp(img, 0, 1)
         
         plt.imshow(img.permute(1, 2, 0))

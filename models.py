@@ -130,7 +130,7 @@ def get_model(model_name="resnet50", dataset_name="imagenette", num_classes=None
     
     if num_classes is None:
         dataset_config = Config.get_dataset_config()
-        num_classes = dataset_config["num_classes"]
+        num_classes = dataset_config["classes"]
     
     if dataset_name in ["imagenet", "imagenet_mini"]:
         if model_name == "resnet50":
