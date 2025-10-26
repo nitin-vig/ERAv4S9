@@ -27,7 +27,7 @@ class ProgressiveConfig:
             "classes": 10,
             "image_size": 224,
             "epochs": 20,
-            "batch_size": 64,
+            "batch_size": 256,
             "lr": 0.001,
             "optimizer": "adamw",
             "scheduler": "cosine",
