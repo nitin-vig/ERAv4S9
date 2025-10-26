@@ -150,8 +150,9 @@ def test_epoch(model, device, test_loader, criterion, metrics_tracker):
             data, target = data.to(device), target.to(device)
             output = model(data)
             
-            # Calculate loss
-            test_loss += criterion(output, target, reduction='sum').item()
+            # Calculate loss (criterion returns mean per batch, multiply by batch size to get sum)
+            batch_size = target.size(0)
+            test_loss += criterion(output, target).item() * batch_size
 
             # Top-1 accuracy
             pred = output.argmax(dim=1, keepdim=True)
@@ -301,7 +302,9 @@ def evaluate_model(model, test_loader, device, criterion=None):
             data, target = data.to(device), target.to(device)
             output = model(data)
             
-            test_loss += criterion(output, target, reduction='sum').item()
+            # Calculate loss (criterion returns mean per batch, multiply by batch size to get sum)
+            batch_size = target.size(0)
+            test_loss += criterion(output, target).item() * batch_size
             
             # Top-1 accuracy
             pred = output.argmax(dim=1, keepdim=True)
