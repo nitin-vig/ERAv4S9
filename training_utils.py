@@ -322,6 +322,19 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
     if pretrained_weights_path and os.path.exists(pretrained_weights_path):
         try:
             pretrained_weights = torch.load(pretrained_weights_path, map_location=device)
+            
+            # Check current model output size
+            current_fc_size = model.fc.out_features
+            pretrained_fc_size = pretrained_weights.get('fc.weight', torch.empty(0)).shape[0] if 'fc.weight' in pretrained_weights else None
+            
+            print(f"   Current model output size: {current_fc_size}")
+            print(f"   Pretrained model output size: {pretrained_fc_size}")
+            
+            # Filter out final layer (fc) if sizes are different
+            if pretrained_fc_size and current_fc_size != pretrained_fc_size:
+                print(f"   ⚠️ Final layer size mismatch! Keeping new final layer (not loading from pretrained)")
+                pretrained_weights = {k: v for k, v in pretrained_weights.items() if 'fc' not in k}
+            
             model.load_state_dict(pretrained_weights, strict=False)
             print(f"✅ Loaded pretrained weights from {pretrained_weights_path}")
             print("   (strict=False allows different final layer sizes)")
