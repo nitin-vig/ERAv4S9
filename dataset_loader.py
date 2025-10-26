@@ -480,31 +480,6 @@ def get_albumentations_transforms(dataset_config, is_training=True):
     
     return transform
 
-def get_torchvision_transforms(dataset_config, is_training=True):
-    """Get torchvision transforms for data augmentation"""
-    
-    # Get mean and std from AUGMENTATION config
-    norm_key = "train" if is_training else "val"
-    mean = Config.AUGMENTATION[norm_key]["normalize"]["mean"]
-    std = Config.AUGMENTATION[norm_key]["normalize"]["std"]
-    
-    if is_training:
-        transform = transforms.Compose([
-            transforms.Resize((dataset_config["image_size"], dataset_config["image_size"])),
-            transforms.RandomCrop(dataset_config["image_size"], padding=4),
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)
-        ])
-    else:
-        transform = transforms.Compose([
-            transforms.Resize((dataset_config["image_size"], dataset_config["image_size"])),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)
-        ])
-    
-    return transform
-
 
 def get_tiny_imagenet_dataset():
     """Get Tiny ImageNet dataset"""
