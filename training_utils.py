@@ -246,9 +246,9 @@ def train_model(model, train_loader, test_loader, device, config=None):
         scheduler_name=dataset_config.get("scheduler", "reduce_lr"),
         step_size=30,
         gamma=0.1,
-        patience=config.SCHEDULER_PATIENCE,
-        factor=config.SCHEDULER_FACTOR,
-        min_lr=config.SCHEDULER_MIN_LR
+        patience=10,
+        factor=0.5,
+        min_lr=1e-6
     )
     
     criterion = get_criterion(criterion_name="cross_entropy", label_smoothing=0.1)
