@@ -17,7 +17,7 @@ class ProgressiveConfig:
     SAVE_MODEL_PATH = "./models"
     MODEL_NAME = "resnet50"
     MOUNT_DRIVE = False
-    DRIVE_MODEL_PATH = "/content/drive/MyDrive/models"
+    DRIVE_MODEL_PATH = "/gdrive/My Drive/models"
 
     
     # Training stages configuration

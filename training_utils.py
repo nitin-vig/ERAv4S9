@@ -46,13 +46,13 @@ class MetricsTracker:
         # Training Loss
         axs[0, 0].plot(self.train_losses)
         axs[0, 0].set_title("Training Loss")
-        axs[0, 0].set_xlabel("Batch")
+        axs[0, 0].set_xlabel("Epoch")
         axs[0, 0].set_ylabel("Loss")
         
         # Training Accuracy
         axs[1, 0].plot(self.train_acc)
         axs[1, 0].set_title("Training Accuracy")
-        axs[1, 0].set_xlabel("Batch")
+        axs[1, 0].set_xlabel("Epoch")
         axs[1, 0].set_ylabel("Accuracy (%)")
         
         # Test Loss
@@ -70,10 +70,15 @@ class MetricsTracker:
         plt.tight_layout()
         
         if save_path:
-            plt.savefig(save_path)
-            print(f"Metrics plot saved to {save_path}")
+            plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            print(f"✅ Metrics plot saved to {save_path}")
         
-        plt.show()
+        # Only show if not in headless mode and save_path not provided
+        # Or show after saving in interactive mode
+        if save_path is None or os.environ.get('DISPLAY') is not None:
+            plt.show()
+        else:
+            plt.close()
 
 def topk_accuracy(output, target, k=5):
     """
