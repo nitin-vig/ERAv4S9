@@ -84,7 +84,7 @@ def topk_accuracy(output, target, k=5):
         k (int): The number of top predictions to consider.
 
     Returns:
-        float: The top-k accuracy.
+        int: The number of correct top-k predictions in this batch.
     """
     with torch.no_grad():
         # Get the top k predictions
@@ -99,8 +99,8 @@ def topk_accuracy(output, target, k=5):
         # Calculate the number of correct predictions (check across k predictions for each sample)
         correct_count = correct.any(dim=1).sum().item()
 
-        # Return the accuracy as a percentage
-        return (correct_count / target.size(0))
+        # Return the count, not the fraction
+        return correct_count
 
 def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker):
     """Train the model for one epoch"""
