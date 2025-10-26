@@ -601,17 +601,17 @@ def get_data_loaders(dataset_name="imagenette"):
     if len(train_dataset) == 0 or len(test_dataset) == 0:
         raise RuntimeError(f"Dataset '{dataset_name}' is empty. Please download the dataset first.")
     
-    # DataLoader arguments
-    dataloader_args = {
-        'shuffle': True,
-        'batch_size': Config.BATCH_SIZE,
-        'num_workers': Config.NUM_WORKERS,
-        'pin_memory': Config.PIN_MEMORY
-    }
+    # # DataLoader arguments
+    # dataloader_args = {
+    #     'shuffle': True,
+    #     'batch_size': Config.BATCH_SIZE,
+    #     'num_workers': Config.NUM_WORKERS,
+    #     'pin_memory': Config.PIN_MEMORY
+    # }
     
     # Create data loaders
-    train_loader = DataLoader(train_dataset, **dataloader_args)
-    test_loader = DataLoader(test_dataset, **dataloader_args)
+    train_loader = DataLoader(train_dataset, **Config.DATA_LOADING)
+    test_loader = DataLoader(test_dataset, **Config.DATA_LOADING)
     
     print(f"Dataset: {dataset_name}")
     print(f"Train samples: {len(train_dataset)}")
