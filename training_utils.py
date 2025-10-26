@@ -108,6 +108,7 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metric
     pbar = tqdm(train_loader, desc=f'Epoch {epoch+1}')
     correct = 0
     processed = 0
+    total_loss = 0
     
     for batch_idx, (data, target) in enumerate(pbar):
         # Move data to device
@@ -124,19 +125,23 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metric
         loss.backward()
         optimizer.step()
 
-        # Calculate accuracy
+        # Track metrics for epoch summary
         pred = output.argmax(dim=1, keepdim=True)
         correct += pred.eq(target.view_as(pred)).sum().item()
         processed += len(data)
+        total_loss += loss.item()
 
-        # Update metrics
-        accuracy = 100. * correct / processed
-        metrics_tracker.add_train_metrics(loss.item(), accuracy)
-
-        # Update progress bar
+        # Update progress bar with running metrics
+        batch_accuracy = 100. * correct / processed
+        avg_loss = total_loss / (batch_idx + 1)
         pbar.set_description(
-            desc=f'Epoch {epoch+1} - Loss={loss.item():.4f} - Accuracy={accuracy:.2f}%'
+            desc=f'Epoch {epoch+1} - Loss={avg_loss:.4f} - Accuracy={batch_accuracy:.2f}%'
         )
+    
+    # Add final metrics for this epoch (once at the end)
+    epoch_loss = total_loss / len(train_loader)
+    epoch_accuracy = 100. * correct / processed
+    metrics_tracker.add_train_metrics(epoch_loss, epoch_accuracy)
 
 def test_epoch(model, device, test_loader, criterion, metrics_tracker):
     """Test the model"""
