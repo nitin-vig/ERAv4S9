@@ -94,8 +94,17 @@ class TinyImageNetDataset(Dataset):
             print(f"⚠️ Warning: Expected 200 classes for Tiny ImageNet, found {len(self.classes)}")
             print(f"Classes loaded: {len(self.classes)}")
         
+        # Debug: print class range
+        print(f"📊 Tiny ImageNet Dataset Info:")
+        print(f"   Total classes: {len(self.classes)}")
+        if len(self.classes) > 0:
+            print(f"   Label range: 0 to {len(self.classes) - 1}")
+            print(f"   First 5 classes: {self.classes[:5]}")
+            print(f"   Last 5 classes: {self.classes[-5:]}")
+        
         # Load all image paths and labels
         self.samples = []
+        label_counts = {}
         if split == 'train':
             for class_name in self.classes:
                 class_dir = os.path.join(self.data_dir, class_name, 'images')
@@ -107,6 +116,7 @@ class TinyImageNetDataset(Dataset):
                             # Validate label is in valid range
                             if label >= len(self.classes):
                                 raise ValueError(f"Invalid label {label} for {len(self.classes)} classes")
+                            label_counts[label] = label_counts.get(label, 0) + 1
                             self.samples.append((img_path, label))
         else:
             # For validation, load from val_annotations.txt
@@ -124,7 +134,18 @@ class TinyImageNetDataset(Dataset):
                             if label >= len(self.classes):
                                 print(f"⚠️ Skipping invalid label {label} for class {class_name}")
                                 continue
+                            label_counts[label] = label_counts.get(label, 0) + 1
                             self.samples.append((img_path, label))
+        
+        # Debug: show label distribution
+        if label_counts:
+            min_label = min(label_counts.keys())
+            max_label = max(label_counts.keys())
+            print(f"   Labels in dataset: {min_label} to {max_label} (expected: 0 to {len(self.classes) - 1})")
+            if min_label != 0 or max_label != len(self.classes) - 1:
+                print(f"   ⚠️ LABEL MISMATCH! Some labels are out of range!")
+            else:
+                print(f"   ✅ Labels are in correct range")
     
     def _load_class_names(self):
         """Load Tiny ImageNet class names - only the 200 classes in Tiny ImageNet"""
