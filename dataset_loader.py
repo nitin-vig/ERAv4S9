@@ -431,6 +431,11 @@ def get_albumentations_transforms(dataset_config, is_training=True):
     std = Config.AUGMENTATION[norm_key]["normalize"]["std"]
     
     if is_training:
+        # Calculate CoarseDropout size as percentage of image size
+        img_size = dataset_config["image_size"]
+        dropout_min = max(8, int(img_size * 0.15))  # 15% of image size, minimum 8
+        dropout_max = max(16, int(img_size * 0.30))  # 30% of image size, minimum 16
+        
         transform = A.Compose([
             A.Resize(dataset_config["image_size"], dataset_config["image_size"]),
             A.PadIfNeeded(min_height=dataset_config["image_size"] + 32, 
@@ -441,10 +446,10 @@ def get_albumentations_transforms(dataset_config, is_training=True):
             A.OneOf([
                 A.CoarseDropout(
                     max_holes=1,
-                    max_height=16,
-                    max_width=16,
-                    min_height=8,
-                    min_width=8,
+                    max_height=dropout_max,
+                    max_width=dropout_max,
+                    min_height=dropout_min,
+                    min_width=dropout_min,
                     fill_value=tuple([int(x * 255) for x in mean]),
                     p=0.75
                 ),
@@ -498,8 +503,8 @@ def get_tiny_imagenet_dataset():
         download_tiny_imagenet()
     
     # Get transforms
-    train_transform = get_torchvision_transforms(dataset_config, is_training=True)
-    test_transform = get_torchvision_transforms(dataset_config, is_training=False)
+    train_transform = get_albumentations_transforms(dataset_config, is_training=True)
+    test_transform = get_albumentations_transforms(dataset_config, is_training=False)
     
     # Load datasets
     train_dataset = TinyImageNetDataset(
@@ -521,8 +526,8 @@ def get_imagenette_dataset():
         download_imagenette()
     
     # Get transforms
-    train_transform = get_torchvision_transforms(dataset_config, is_training=True)
-    test_transform = get_torchvision_transforms(dataset_config, is_training=False)
+    train_transform = get_albumentations_transforms(dataset_config, is_training=True)
+    test_transform = get_albumentations_transforms(dataset_config, is_training=False)
     
     # Load datasets
     train_dataset = ImageNetteDataset(
@@ -543,8 +548,8 @@ def get_imagenet_dataset():
         download_imagenet()
     
     # Get transforms
-    train_transform = get_torchvision_transforms(dataset_config, is_training=True)
-    test_transform = get_torchvision_transforms(dataset_config, is_training=False)
+    train_transform = get_albumentations_transforms(dataset_config, is_training=True)
+    test_transform = get_albumentations_transforms(dataset_config, is_training=False)
     
     # Load datasets
     train_dataset = ImageNetDataset(
@@ -566,8 +571,8 @@ def get_imagenet_mini_dataset():
         download_imagenet_mini()
     
     # Get transforms
-    train_transform = get_torchvision_transforms(dataset_config, is_training=True)
-    test_transform = get_torchvision_transforms(dataset_config, is_training=False)
+    train_transform = get_albumentations_transforms(dataset_config, is_training=True)
+    test_transform = get_albumentations_transforms(dataset_config, is_training=False)
     
     # Load datasets
     train_dataset = ImageNetMiniDataset(
