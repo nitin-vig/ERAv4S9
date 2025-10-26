@@ -89,6 +89,11 @@ class TinyImageNetDataset(Dataset):
         self.classes = self._load_class_names()
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
         
+        # Validate class count for Tiny ImageNet
+        if len(self.classes) != 200:
+            print(f"⚠️ Warning: Expected 200 classes for Tiny ImageNet, found {len(self.classes)}")
+            print(f"Classes loaded: {len(self.classes)}")
+        
         # Load all image paths and labels
         self.samples = []
         if split == 'train':
@@ -99,6 +104,9 @@ class TinyImageNetDataset(Dataset):
                         if img_name.lower().endswith(('.jpg', '.jpeg', '.png')):
                             img_path = os.path.join(class_dir, img_name)
                             label = self.class_to_idx[class_name]
+                            # Validate label is in valid range
+                            if label >= len(self.classes):
+                                raise ValueError(f"Invalid label {label} for {len(self.classes)} classes")
                             self.samples.append((img_path, label))
         else:
             # For validation, load from val_annotations.txt
@@ -112,20 +120,25 @@ class TinyImageNetDataset(Dataset):
                         img_path = os.path.join(self.data_dir, 'images', img_name)
                         if os.path.exists(img_path) and class_name in self.class_to_idx:
                             label = self.class_to_idx[class_name]
+                            # Validate label is in valid range
+                            if label >= len(self.classes):
+                                print(f"⚠️ Skipping invalid label {label} for class {class_name}")
+                                continue
                             self.samples.append((img_path, label))
     
     def _load_class_names(self):
-        """Load Tiny ImageNet class names"""
-        words_file = os.path.join(self.root_dir, 'words.txt')
-        if os.path.exists(words_file):
-            with open(words_file, 'r') as f:
-                classes = [line.strip().split('\t')[0] for line in f]
+        """Load Tiny ImageNet class names - only the 200 classes in Tiny ImageNet"""
+        # Tiny ImageNet uses wnids.txt which contains only 200 class IDs
+        wnids_file = os.path.join(self.root_dir, 'wnids.txt')
+        if os.path.exists(wnids_file):
+            with open(wnids_file, 'r') as f:
+                classes = [line.strip() for line in f if line.strip()]
             return sorted(classes)
         else:
-            # Fallback: use directory names
+            # Fallback: use directory names from train folder
             train_dir = os.path.join(self.root_dir, 'train')
             if os.path.exists(train_dir):
-                return sorted(os.listdir(train_dir))
+                return sorted([d for d in os.listdir(train_dir) if os.path.isdir(os.path.join(train_dir, d))])
             return []
     
     def __len__(self):
