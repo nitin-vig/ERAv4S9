@@ -52,7 +52,7 @@ class ProgressiveTrainingStrategy:
                 "classes": 200,
                 "image_size": 64,
                 "epochs": 30,
-                "batch_size": 512,
+                "batch_size": 256,
                 "lr": 0.0005,
                 "optimizer": "adamw",
                 "scheduler": "cosine",

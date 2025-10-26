@@ -14,7 +14,7 @@ class ProgressiveConfig:
     SAVE_DIR = "./progressive_models"
     
     # Additional attributes for notebook compatibility
-    SAVE_MODEL_PATH = "./models"
+    SAVE_MODEL_PATH = "/gdrive/My Drive/models"
     MODEL_NAME = "resnet50"
     MOUNT_DRIVE = False
     DRIVE_MODEL_PATH = "/gdrive/My Drive/models"
@@ -38,11 +38,11 @@ class ProgressiveConfig:
             "priority": 1
         },
         "tiny_imagenet": {
-            "dataset": "tiny_imagenet",
+            "dataset": "tiny_imagenet", 
             "classes": 200,
             "image_size": 64,
             "epochs": 30,
-            "batch_size": 512,
+            "batch_size": 256,
             "lr": 0.0005,
             "optimizer": "adamw",
             "scheduler": "cosine",
