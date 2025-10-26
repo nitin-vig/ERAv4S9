@@ -585,6 +585,9 @@ def get_data_loaders(dataset_name="imagenette"):
     # Set random seed for reproducibility
     torch.manual_seed(Config.SEED if hasattr(Config, 'SEED') else 1)
     
+    # Get dataset configuration (which includes batch_size)
+    dataset_config = Config.get_dataset_config(dataset_name)
+    
     # Try to get dataset
     if dataset_name == "imagenet":
         train_dataset, test_dataset = get_imagenet_dataset()
@@ -601,21 +604,26 @@ def get_data_loaders(dataset_name="imagenette"):
     if len(train_dataset) == 0 or len(test_dataset) == 0:
         raise RuntimeError(f"Dataset '{dataset_name}' is empty. Please download the dataset first.")
     
-    # # DataLoader arguments
-    # dataloader_args = {
-    #     'shuffle': True,
-    #     'batch_size': Config.BATCH_SIZE,
-    #     'num_workers': Config.NUM_WORKERS,
-    #     'pin_memory': Config.PIN_MEMORY
-    # }
+    # DataLoader arguments with batch_size from stage config
+    dataloader_args = {
+        'batch_size': dataset_config['batch_size'],
+        'num_workers': Config.DATA_LOADING.get('num_workers', 4),
+        'pin_memory': Config.DATA_LOADING.get('pin_memory', True),
+        'shuffle': True
+    }
     
     # Create data loaders
-    train_loader = DataLoader(train_dataset, **Config.DATA_LOADING)
-    test_loader = DataLoader(test_dataset, **Config.DATA_LOADING)
+    train_loader = DataLoader(train_dataset, **dataloader_args)
+    test_loader = DataLoader(test_dataset, 
+                            batch_size=dataloader_args['batch_size'],
+                            num_workers=dataloader_args['num_workers'],
+                            pin_memory=dataloader_args['pin_memory'],
+                            shuffle=False)  # Don't shuffle test set
     
     print(f"Dataset: {dataset_name}")
     print(f"Train samples: {len(train_dataset)}")
     print(f"Test samples: {len(test_dataset)}")
+    print(f"Batch size: {dataset_config['batch_size']}")
     print(f"Number of classes: {len(train_dataset.classes) if hasattr(train_dataset, 'classes') else 'Unknown'}")
     
     return train_loader, test_loader
