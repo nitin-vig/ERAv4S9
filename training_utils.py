@@ -390,10 +390,34 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
     final_weights = model.state_dict()
     if next_stage_name:
         next_stage_path = f"{config.SAVE_MODEL_PATH}/weights_for_{next_stage_name}.pth"
+        # Ensure directory exists
+        os.makedirs(config.SAVE_MODEL_PATH, exist_ok=True)
         torch.save(final_weights, next_stage_path)
-        print(f"\n✅ Saved weights for next stage: {next_stage_path}")
+        # Verify file was actually saved
+        if os.path.exists(next_stage_path):
+            file_size = os.path.getsize(next_stage_path) / (1024 * 1024)  # Size in MB
+            print(f"\n✅ Saved weights for next stage: {next_stage_path}")
+            print(f"   File size: {file_size:.2f} MB")
+        else:
+            print(f"\n❌ ERROR: Failed to save weights to {next_stage_path}")
     
     return metrics_tracker, final_weights
+
+def verify_saved_files(save_dir):
+    """Helper function to verify files were actually saved to disk"""
+    print(f"\n📂 Verifying saved files in: {save_dir}")
+    if os.path.exists(save_dir):
+        files = [f for f in os.listdir(save_dir) if f.endswith(('.pth', '.json', '.png'))]
+        if files:
+            print(f"   Found {len(files)} files:")
+            for f in files:
+                file_path = os.path.join(save_dir, f)
+                size = os.path.getsize(file_path) / (1024 * 1024)
+                print(f"     • {f} ({size:.2f} MB)")
+        else:
+            print("   ⚠️ No files found in directory")
+    else:
+        print(f"   ❌ Directory does not exist: {save_dir}")
 
 def evaluate_model(model, test_loader, device, criterion=None):
     """Evaluate the model on test set"""
