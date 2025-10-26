@@ -90,14 +90,14 @@ def topk_accuracy(output, target, k=5):
         # Get the top k predictions
         _, topk_preds = output.topk(k, dim=1, largest=True, sorted=True)
 
-        # Reshape the target tensor for comparison
-        target_reshaped = target.view(1, -1).expand_as(topk_preds)
+        # Reshape the target tensor for comparison (batch_size, 1) -> (batch_size, k)
+        target_reshaped = target.view(-1, 1).expand_as(topk_preds)
 
         # Check if any of the top k predictions match the true label
         correct = (topk_preds == target_reshaped)
 
-        # Calculate the number of correct predictions
-        correct_count = correct.any(dim=0).sum().item()
+        # Calculate the number of correct predictions (check across k predictions for each sample)
+        correct_count = correct.any(dim=1).sum().item()
 
         # Return the accuracy as a percentage
         return (correct_count / target.size(0))
