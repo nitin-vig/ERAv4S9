@@ -2,6 +2,7 @@
 Training utilities module for model training and evaluation
 """
 
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -291,6 +292,103 @@ def train_model(model, train_loader, test_loader, device, config=None):
         print(f"Current learning rate: {current_lr:.6f}")
     
     return metrics_tracker
+
+def train_model_with_transfer(model, train_loader, test_loader, device, config=None, 
+                               pretrained_weights_path=None, next_stage_name=None):
+    """
+    Complete training pipeline with support for progressive transfer learning
+    
+    Args:
+        model: The model to train
+        train_loader: Training data loader
+        test_loader: Test data loader
+        device: Device to use
+        config: Configuration object (optional)
+        pretrained_weights_path: Path to weights from previous stage (optional)
+        next_stage_name: Next stage name for saving weights (optional)
+    
+    Returns:
+        tuple: (metrics_tracker, model_weights_dict)
+    """
+    if config is None:
+        config = Config()
+    
+    # Load pretrained weights from previous stage if provided
+    if pretrained_weights_path and os.path.exists(pretrained_weights_path):
+        try:
+            pretrained_weights = torch.load(pretrained_weights_path, map_location=device)
+            model.load_state_dict(pretrained_weights, strict=False)
+            print(f"✅ Loaded pretrained weights from {pretrained_weights_path}")
+            print("   (strict=False allows different final layer sizes)")
+        except Exception as e:
+            print(f"⚠️  Warning: Could not load pretrained weights: {e}")
+            print("   Starting training without pretrained weights")
+    
+    # Initialize metrics tracker
+    metrics_tracker = MetricsTracker()
+    
+    # Get dataset-specific configuration
+    dataset_config = config.get_dataset_config()
+    
+    # Get optimizer, scheduler, and criterion based on dataset
+    optimizer = get_optimizer(
+        model, 
+        optimizer_name=dataset_config.get("optimizer", "adamw"), 
+        lr=dataset_config.get("lr", config.LEARNING_RATE), 
+        weight_decay=config.WEIGHT_DECAY
+    )
+    
+    scheduler = get_scheduler(
+        optimizer, 
+        scheduler_name=dataset_config.get("scheduler", "reduce_lr"),
+        step_size=30,
+        gamma=0.1,
+        patience=10,
+        factor=0.5,
+        min_lr=1e-6
+    )
+    
+    criterion = get_criterion(criterion_name="cross_entropy", label_smoothing=0.1)
+    
+    # Training loop
+    best_test_loss = float('inf')
+    
+    for epoch in range(config.NUM_EPOCHS):
+        print(f"\nEpoch {epoch+1}/{config.NUM_EPOCHS}")
+        
+        # Train
+        train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker)
+        
+        # Test
+        test_loss = test_epoch(model, device, test_loader, criterion, metrics_tracker)
+        
+        # Update scheduler based on type
+        if dataset_config.get("scheduler", "reduce_lr") == "step":
+            scheduler.step()
+        else:
+            scheduler.step(test_loss)
+        
+        # Track learning rate
+        current_lr = optimizer.param_groups[0]['lr']
+        metrics_tracker.add_lr(current_lr)
+        
+        # Save best model
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            save_path = f"{config.SAVE_MODEL_PATH}/best_model_{config.DATASET_NAME}.pth"
+            torch.save(model.state_dict(), save_path)
+            print(f"New best model saved with test loss: {test_loss:.4f}")
+        
+        print(f"Current learning rate: {current_lr:.6f}")
+    
+    # Save weights for next stage if specified
+    final_weights = model.state_dict()
+    if next_stage_name:
+        next_stage_path = f"{config.SAVE_MODEL_PATH}/weights_for_{next_stage_name}.pth"
+        torch.save(final_weights, next_stage_path)
+        print(f"\n✅ Saved weights for next stage: {next_stage_path}")
+    
+    return metrics_tracker, final_weights
 
 def evaluate_model(model, test_loader, device, criterion=None):
     """Evaluate the model on test set"""

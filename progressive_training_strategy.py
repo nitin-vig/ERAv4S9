@@ -30,51 +30,67 @@ class ProgressiveTrainingStrategy:
         # Create save directory
         os.makedirs(save_dir, exist_ok=True)
         
-        # Define training stages
+        # Define training stages (aligned with Config.STAGES)
         self.stages = {
             "imagenette": {
                 "dataset": "imagenette",
                 "classes": 10,
                 "image_size": 224,
                 "epochs": 20,
-                "batch_size": 64,
+                "batch_size": 256,
                 "lr": 0.001,
                 "optimizer": "adamw",
                 "scheduler": "cosine",
-                "description": "Quick warmup and architecture validation"
+                "weight_decay": 1e-4,
+                "label_smoothing": 0.1,
+                "description": "Quick warmup and architecture validation",
+                "enabled": True,
+                "priority": 1
             },
             "tiny_imagenet": {
                 "dataset": "tiny_imagenet", 
                 "classes": 200,
                 "image_size": 64,
                 "epochs": 30,
-                "batch_size": 128,
+                "batch_size": 512,
                 "lr": 0.0005,
                 "optimizer": "adamw",
                 "scheduler": "cosine",
-                "description": "Medium complexity training"
+                "weight_decay": 1e-4,
+                "label_smoothing": 0.1,
+                "description": "Medium complexity training",
+                "enabled": True,
+                "priority": 2
             },
             "imagenet_mini": {
                 "dataset": "imagenet_mini",
                 "classes": 1000,
                 "image_size": 224,
                 "epochs": 40,
-                "batch_size": 96,
+                "batch_size": 256,
                 "lr": 0.0003,
                 "optimizer": "sgd",
                 "scheduler": "step",
-                "description": "Full ImageNet complexity with subset data"
+                "weight_decay": 1e-4,
+                "label_smoothing": 0.1,
+                "description": "Full ImageNet complexity with subset data",
+                "enabled": True,
+                "priority": 3
             },
-            "imagenet_full": {
+            "imagenet": {
                 "dataset": "imagenet",
                 "classes": 1000,
                 "image_size": 224,
                 "epochs": 60,
-                "batch_size": 128,
+                "batch_size": 256,
                 "lr": 0.1,
                 "optimizer": "sgd",
                 "scheduler": "step",
-                "description": "Final full-scale training"
+                "weight_decay": 1e-4,
+                "label_smoothing": 0.1,
+                "description": "Final full-scale training",
+                "enabled": True,
+                "priority": 4
             }
         }
     
@@ -518,7 +534,7 @@ class DatasetManager:
         
         return train_loader, val_loader
     
-    def load_imagenet_full(self, batch_size=128):
+    def load_imagenet(self, batch_size=128):
         """Load full ImageNet dataset"""
         print("Loading Full ImageNet dataset...")
         
@@ -575,7 +591,7 @@ class DatasetManager:
             print(f"Could not load ImageNet Mini: {e}")
         
         try:
-            self.load_imagenet_full()
+            self.load_imagenet()
         except Exception as e:
             print(f"Could not load Full ImageNet: {e}")
         

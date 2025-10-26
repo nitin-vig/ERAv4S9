@@ -121,9 +121,31 @@ class ResNetImageNet(nn.Module):
 
 
 def resnet50_imagenet(num_classes=1000, pretrained=False):
-    """ResNet50 for ImageNet - Custom implementation only"""
-    # Always use custom implementation (no pretrained weights)
-    return ResNetImageNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
+    """ResNet50 for ImageNet"""
+    model = ResNetImageNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
+    
+    # Load torchvision pretrained weights if requested
+    if pretrained:
+        try:
+            import torchvision.models as tv_models
+            pretrained_model = tv_models.resnet50(weights='IMAGENET1K_V2')
+            
+            # Copy all weights except the final fc layer
+            model_dict = model.state_dict()
+            pretrained_dict = pretrained_model.state_dict()
+            
+            # Filter out fc layer weights (different num_classes)
+            pretrained_dict = {k: v for k, v in pretrained_dict.items() 
+                             if k in model_dict and model_dict[k].shape == v.shape 
+                             and 'fc' not in k}
+            
+            model_dict.update(pretrained_dict)
+            model.load_state_dict(model_dict)
+            print(f"✅ Loaded ImageNet pretrained weights from torchvision")
+        except Exception as e:
+            print(f"⚠️  Could not load pretrained weights: {e}")
+    
+    return model
 
 def get_model(model_name="resnet50", dataset_name="imagenette", num_classes=None, pretrained=False):
     """Get the appropriate model for the dataset - supports multiple ImageNet variants"""
@@ -134,15 +156,13 @@ def get_model(model_name="resnet50", dataset_name="imagenette", num_classes=None
     
     if dataset_name in ["imagenet", "imagenet_mini"]:
         if model_name == "resnet50":
-            # Always use custom implementation (pretrained parameter ignored)
-            return resnet50_imagenet(num_classes=num_classes, pretrained=False)
+            return resnet50_imagenet(num_classes=num_classes, pretrained=pretrained)
         else:
             raise ValueError(f"Model {model_name} not supported for {dataset_name}")
     
     elif dataset_name in ["tiny_imagenet", "imagenette"]:
         if model_name == "resnet50":
-            # Use custom implementation adapted for smaller datasets
-            return resnet50_imagenet(num_classes=num_classes, pretrained=False)
+            return resnet50_imagenet(num_classes=num_classes, pretrained=pretrained)
         else:
             raise ValueError(f"Model {model_name} not supported for {dataset_name}")
     
