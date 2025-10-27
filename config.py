@@ -14,10 +14,10 @@ class ProgressiveConfig:
     SAVE_DIR = "./progressive_models"
     
     # Additional attributes for notebook compatibility
-    SAVE_MODEL_PATH = "/gdrive/My Drive/models"
+    SAVE_MODEL_PATH = "/content/gdrive/My Drive/models"
     MODEL_NAME = "resnet50"
-    MOUNT_DRIVE = False
-    DRIVE_MODEL_PATH = "/gdrive/My Drive/models"
+    MOUNT_DRIVE = True
+    DRIVE_MODEL_PATH = "/content/gdrive/My Drive/models"
 
     
     # Training stages configuration
@@ -41,14 +41,14 @@ class ProgressiveConfig:
             "dataset": "tiny_imagenet", 
             "classes": 200,
             "image_size": 64,
-            "epochs": 30,
+            "epochs": 40,
             "batch_size": 256,
-            "lr": 0.0005,
+            "lr": 0.002,
             "optimizer": "adamw",
-            "scheduler": "cosine",
+            "scheduler": "one_cycle",
             "weight_decay": 1e-4,
             "label_smoothing": 0.1,
-            "description": "Medium complexity training",
+            "description": "Medium complexity training with One Cycle LR for faster convergence",
             "enabled": True,
             "priority": 2
         },
@@ -56,14 +56,14 @@ class ProgressiveConfig:
             "dataset": "imagenet_mini",
             "classes": 1000,
             "image_size": 224,
-            "epochs": 40,
+            "epochs": 60,
             "batch_size": 256,
-            "lr": 0.0003,
+            "lr": 0.1,
             "optimizer": "sgd",
-            "scheduler": "step",
+            "scheduler": "one_cycle",
             "weight_decay": 1e-4,
             "label_smoothing": 0.1,
-            "description": "Full ImageNet complexity with subset data",
+            "description": "Full ImageNet complexity with subset data - One Cycle LR for fast convergence",
             "enabled": True,
             "priority": 3
         },
@@ -71,14 +71,14 @@ class ProgressiveConfig:
             "dataset": "imagenet",
             "classes": 1000,
             "image_size": 224,
-            "epochs": 60,
+            "epochs": 90,
             "batch_size": 256,
             "lr": 0.1,
             "optimizer": "sgd",
-            "scheduler": "step",
+            "scheduler": "one_cycle",
             "weight_decay": 1e-4,
             "label_smoothing": 0.1,
-            "description": "Final full-scale training",
+            "description": "Final full-scale training with One Cycle LR for super-convergence",
             "enabled": True,
             "priority": 4
         }

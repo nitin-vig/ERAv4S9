@@ -108,7 +108,7 @@ def topk_accuracy(output, target, k=5):
         # Return the count, not the fraction
         return correct_count
 
-def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker):
+def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker, scheduler=None):
     """Train the model for one epoch"""
     model.train()
     pbar = tqdm(train_loader, desc=f'Epoch {epoch+1}')
@@ -130,6 +130,10 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metric
         # Backward pass
         loss.backward()
         optimizer.step()
+        
+        # Step scheduler per batch for One Cycle LR
+        if scheduler is not None and isinstance(scheduler, optim.lr_scheduler.OneCycleLR):
+            scheduler.step()
 
         # Track metrics for epoch summary
         pred = output.argmax(dim=1, keepdim=True)
@@ -140,8 +144,9 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, metric
         # Update progress bar with running metrics
         batch_accuracy = 100. * correct / processed
         avg_loss = total_loss / (batch_idx + 1)
+        current_lr = optimizer.param_groups[0]['lr']
         pbar.set_description(
-            desc=f'Epoch {epoch+1} - Loss={avg_loss:.4f} - Accuracy={batch_accuracy:.2f}%'
+            desc=f'Epoch {epoch+1} - Loss={avg_loss:.4f} - Acc={batch_accuracy:.2f}% - LR={current_lr:.6f}'
         )
     
     # Add final metrics for this epoch (once at the end)
@@ -198,8 +203,20 @@ def get_optimizer(model, optimizer_name="sgd", lr=0.1, weight_decay=1e-4):
         raise ValueError(f"Unknown optimizer: {optimizer_name}")
 
 def get_scheduler(optimizer, scheduler_name="step", **kwargs):
-    """Get learning rate scheduler - StepLR is standard for ImageNet"""
-    if scheduler_name.lower() == "step":
+    """Get learning rate scheduler - supports OneCycleLR for super-convergence"""
+    if scheduler_name.lower() == "one_cycle":
+        # OneCycleLR: Super-convergence scheduler
+        return optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=kwargs.get('max_lr', 0.1),  # Peak learning rate
+            epochs=kwargs.get('epochs', 90),     # Total epochs
+            steps_per_epoch=kwargs.get('steps_per_epoch', 5000),
+            pct_start=kwargs.get('pct_start', 0.3),  # 30% for warmup
+            anneal_strategy=kwargs.get('anneal_strategy', 'cos'),
+            div_factor=kwargs.get('div_factor', 25),  # Initial LR = max_lr/25
+            final_div_factor=kwargs.get('final_div_factor', 10000)  # Final LR = max_lr/250000
+        )
+    elif scheduler_name.lower() == "step":
         return optim.lr_scheduler.StepLR(
             optimizer,
             step_size=kwargs.get('step_size', 30),
@@ -253,15 +270,34 @@ def train_model(model, train_loader, test_loader, device, config=None):
         weight_decay=config.WEIGHT_DECAY
     )
     
-    scheduler = get_scheduler(
-        optimizer, 
-        scheduler_name=dataset_config.get("scheduler", "reduce_lr"),
-        step_size=30,
-        gamma=0.1,
-        patience=10,
-        factor=0.5,
-        min_lr=1e-6
-    )
+    # Calculate steps per epoch for One Cycle LR
+    steps_per_epoch = len(train_loader)
+    scheduler_name = dataset_config.get("scheduler", "reduce_lr")
+    
+    # Initialize scheduler
+    if scheduler_name.lower() == "one_cycle":
+        scheduler = get_scheduler(
+            optimizer,
+            scheduler_name=scheduler_name,
+            max_lr=dataset_config.get("lr", config.LEARNING_RATE),
+            epochs=config.NUM_EPOCHS,
+            steps_per_epoch=steps_per_epoch
+        )
+    elif scheduler_name.lower() == "step":
+        scheduler = get_scheduler(
+            optimizer,
+            scheduler_name=scheduler_name,
+            step_size=30,
+            gamma=0.1
+        )
+    else:
+        scheduler = get_scheduler(
+            optimizer,
+            scheduler_name=scheduler_name,
+            patience=10,
+            factor=0.5,
+            min_lr=1e-6
+        )
     
     criterion = get_criterion(criterion_name="cross_entropy", label_smoothing=0.1)
     
@@ -271,16 +307,16 @@ def train_model(model, train_loader, test_loader, device, config=None):
     for epoch in range(config.NUM_EPOCHS):
         print(f"\nEpoch {epoch+1}/{config.NUM_EPOCHS}")
         
-        # Train
-        train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker)
+        # Train (pass scheduler for One Cycle LR)
+        train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker, scheduler=scheduler)
         
         # Test
         test_loss = test_epoch(model, device, test_loader, criterion, metrics_tracker)
         
-        # Update scheduler based on type
-        if dataset_config.get("scheduler", "reduce_lr") == "step":
+        # Update scheduler based on type (One Cycle LR steps per batch, not here)
+        if scheduler_name.lower() == "step":
             scheduler.step()  # StepLR updates every epoch
-        else:
+        elif scheduler_name.lower() not in ["one_cycle"]:
             scheduler.step(test_loss)  # ReduceLROnPlateau updates based on loss
         
         # Track learning rate
@@ -356,15 +392,34 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
         weight_decay=config.WEIGHT_DECAY
     )
     
-    scheduler = get_scheduler(
-        optimizer, 
-        scheduler_name=dataset_config.get("scheduler", "reduce_lr"),
-        step_size=30,
-        gamma=0.1,
-        patience=10,
-        factor=0.5,
-        min_lr=1e-6
-    )
+    # Calculate steps per epoch for One Cycle LR
+    steps_per_epoch = len(train_loader)
+    scheduler_name = dataset_config.get("scheduler", "reduce_lr")
+    
+    # Initialize scheduler
+    if scheduler_name.lower() == "one_cycle":
+        scheduler = get_scheduler(
+            optimizer,
+            scheduler_name=scheduler_name,
+            max_lr=dataset_config.get("lr", config.LEARNING_RATE),
+            epochs=config.NUM_EPOCHS,
+            steps_per_epoch=steps_per_epoch
+        )
+    elif scheduler_name.lower() == "step":
+        scheduler = get_scheduler(
+            optimizer,
+            scheduler_name=scheduler_name,
+            step_size=30,
+            gamma=0.1
+        )
+    else:
+        scheduler = get_scheduler(
+            optimizer,
+            scheduler_name=scheduler_name,
+            patience=10,
+            factor=0.5,
+            min_lr=1e-6
+        )
     
     criterion = get_criterion(criterion_name="cross_entropy", label_smoothing=0.1)
     
@@ -374,16 +429,16 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
     for epoch in range(config.NUM_EPOCHS):
         print(f"\nEpoch {epoch+1}/{config.NUM_EPOCHS}")
         
-        # Train
-        train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker)
+        # Train (pass scheduler for One Cycle LR)
+        train_epoch(model, device, train_loader, optimizer, criterion, epoch, metrics_tracker, scheduler=scheduler)
         
         # Test
         test_loss = test_epoch(model, device, test_loader, criterion, metrics_tracker)
         
-        # Update scheduler based on type
-        if dataset_config.get("scheduler", "reduce_lr") == "step":
+        # Update scheduler based on type (One Cycle LR steps per batch, not here)
+        if scheduler_name.lower() == "step":
             scheduler.step()
-        else:
+        elif scheduler_name.lower() not in ["one_cycle"]:
             scheduler.step(test_loss)
         
         # Track learning rate
