@@ -502,9 +502,9 @@ def get_albumentations_transforms(dataset_config, is_training=True):
     return transform
 
 
-def get_tiny_imagenet_dataset():
+def get_tiny_imagenet_dataset(dataset_name="tiny_imagenet"):
     """Get Tiny ImageNet dataset"""
-    dataset_config = Config.get_dataset_config()
+    dataset_config = Config.get_dataset_config(dataset_name)
     
     # Download dataset if not exists
     tiny_imagenet_path = os.path.join(Config.DATA_ROOT, "tiny-imagenet-200")
@@ -525,9 +525,9 @@ def get_tiny_imagenet_dataset():
     
     return train_dataset, test_dataset
 
-def get_imagenette_dataset():
+def get_imagenette_dataset(dataset_name="imagenette"):
     """Get ImageNette dataset"""
-    dataset_config = Config.get_dataset_config()
+    dataset_config = Config.get_dataset_config(dataset_name)
     
     # Download dataset if not exists
     imagenette_path = os.path.join(Config.DATA_ROOT, "imagenette2")
@@ -547,9 +547,9 @@ def get_imagenette_dataset():
     )
     
     return train_dataset, test_dataset
-def get_imagenet_dataset():
+def get_imagenet_dataset(dataset_name="imagenet"):
     """Get full ImageNet dataset"""
-    dataset_config = Config.get_dataset_config()
+    dataset_config = Config.get_dataset_config(dataset_name)
     
     # Download dataset if not exists
     imagenet_path = os.path.join(Config.DATA_ROOT, "imagenet")
@@ -570,9 +570,9 @@ def get_imagenet_dataset():
     
     return train_dataset, test_dataset
 
-def get_imagenet_mini_dataset():
+def get_imagenet_mini_dataset(dataset_name="imagenet_mini"):
     """Get ImageNet Mini dataset"""
-    dataset_config = Config.get_dataset_config()
+    dataset_config = Config.get_dataset_config(dataset_name)
     
     # Download dataset if not exists
     imagenet_path = os.path.join(Config.DATA_ROOT, "imagenet-mini")
@@ -604,13 +604,13 @@ def get_data_loaders(dataset_name="imagenette"):
     
     # Try to get dataset
     if dataset_name == "imagenet":
-        train_dataset, test_dataset = get_imagenet_dataset()
+        train_dataset, test_dataset = get_imagenet_dataset(dataset_name)
     elif dataset_name == "imagenet_mini":
-        train_dataset, test_dataset = get_imagenet_mini_dataset()
+        train_dataset, test_dataset = get_imagenet_mini_dataset(dataset_name)
     elif dataset_name == "tiny_imagenet":
-        train_dataset, test_dataset = get_tiny_imagenet_dataset()
+        train_dataset, test_dataset = get_tiny_imagenet_dataset(dataset_name)
     elif dataset_name == "imagenette":
-        train_dataset, test_dataset = get_imagenette_dataset()
+        train_dataset, test_dataset = get_imagenette_dataset(dataset_name)
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
     

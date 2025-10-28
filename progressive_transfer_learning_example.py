@@ -116,7 +116,8 @@ def progressive_transfer_learning(resume_from_stage=None):
             device=device,
             config=Config,
             pretrained_weights_path=pretrained_weights_path,
-            next_stage_name=stage['next']
+            next_stage_name=stage['next'],
+            dataset_name=stage['name']
         )
         
         # Set weights path for next stage

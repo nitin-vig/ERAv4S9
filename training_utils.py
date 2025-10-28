@@ -250,7 +250,7 @@ def get_criterion(criterion_name="cross_entropy", **kwargs):
     else:
         raise ValueError(f"Unknown criterion: {criterion_name}")
 
-def train_model(model, train_loader, test_loader, device, config=None):
+def train_model(model, train_loader, test_loader, device, config=None, dataset_name=None):
     """Complete training pipeline with dataset-specific configuration"""
     
     if config is None:
@@ -259,8 +259,8 @@ def train_model(model, train_loader, test_loader, device, config=None):
     # Initialize metrics tracker
     metrics_tracker = MetricsTracker()
     
-    # Get dataset-specific configuration
-    dataset_config = config.get_dataset_config()
+    # Get dataset-specific configuration - pass dataset_name if available
+    dataset_config = config.get_dataset_config(dataset_name)
     
     # Calculate steps per epoch and get scheduler info
     steps_per_epoch = len(train_loader)
@@ -338,7 +338,7 @@ def train_model(model, train_loader, test_loader, device, config=None):
     return metrics_tracker
 
 def train_model_with_transfer(model, train_loader, test_loader, device, config=None, 
-                               pretrained_weights_path=None, next_stage_name=None):
+                               pretrained_weights_path=None, next_stage_name=None, dataset_name=None):
     """
     Complete training pipeline with support for progressive transfer learning
     
@@ -350,6 +350,7 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
         config: Configuration object (optional)
         pretrained_weights_path: Path to weights from previous stage (optional)
         next_stage_name: Next stage name for saving weights (optional)
+        dataset_name: Name of the current dataset/stage for getting the correct config (optional)
     
     Returns:
         tuple: (metrics_tracker, model_weights_dict)
@@ -387,8 +388,8 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
     # Initialize metrics tracker
     metrics_tracker = MetricsTracker()
     
-    # Get dataset-specific configuration
-    dataset_config = config.get_dataset_config()
+    # Get dataset-specific configuration - pass dataset_name if available
+    dataset_config = config.get_dataset_config(dataset_name)
     
     # Calculate steps per epoch and get scheduler info
     steps_per_epoch = len(train_loader)
