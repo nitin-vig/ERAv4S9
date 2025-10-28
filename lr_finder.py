@@ -20,7 +20,7 @@ except ImportError:
     LRFinder = None
 
 
-def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_imagenet", weight_decay=1e-3):
+def find_optimal_lr(model, train_loader, device, dataset_name="tiny_imagenet", weight_decay=1e-3):
     """
     Find optimal learning rate for One Cycle LR using pytorch-lr-finder
     
@@ -32,7 +32,7 @@ def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_im
         weight_decay: Weight decay for the optimizer
         
     Returns:
-        tuple: (suggested_min_lr, suggested_max_lr) for One Cycle LR
+        Optimal learning rate for One Cycle LR
     """
     if not HAS_LRFINDER:
         raise ImportError("pytorch-lr-finder is required. Install with: pip install torch-lr-finder")
@@ -106,13 +106,13 @@ def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_im
     return suggested_lr
 
 
-def run_lr_finder_for_stage(stage_name, dataset_name=None, num_iter=200):
+def run_lr_finder(model, dataset_name, num_iter=200):
     """
-    Convenience function to run LR finder for a specific stage
+    Convenience function to run LR finder for a specific dataset with the given model
     
     Args:
-        stage_name: Name of the stage (e.g., "tiny_imagenet")
-        dataset_name: Dataset to use (defaults to stage_name)
+        model: Model to use for LR finder (can be fresh or pretrained)
+        dataset_name: Name of the dataset (e.g., "tiny_imagenet")
         num_iter: Number of iterations
         
     Returns:
@@ -125,22 +125,17 @@ def run_lr_finder_for_stage(stage_name, dataset_name=None, num_iter=200):
             "  # Then run this cell again"
         )
     
-    if dataset_name is None:
-        dataset_name = stage_name
-    
-    from models import get_model
     from dataset_loader import get_data_loaders
     from config import Config
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    # Get config for this stage
-    Config.update_for_dataset(dataset_name)
+    # Get config for this dataset
     dataset_config = Config.get_dataset_config(dataset_name)
     
     print(f"\n{'='*60}")
-    print(f"LR Finder for: {stage_name}")
+    print(f"LR Finder for: {dataset_name}")
     print(f"{'='*60}")
     print(f"Dataset: {dataset_name}")
     print(f"Image size: {dataset_config['image_size']}")
@@ -151,13 +146,9 @@ def run_lr_finder_for_stage(stage_name, dataset_name=None, num_iter=200):
     print("\nLoading dataset...")
     train_loader, _ = get_data_loaders(dataset_name)
     
-    # Create model
-    print("Creating model...")
-    model = get_model(model_name="resnet50", dataset_name=dataset_name)
-    
     # Run LR finder
     weight_decay = dataset_config.get("weight_decay", 1e-3)
-    optimal_lr = find_optimal_lr_for_stage(model, train_loader, device, dataset_name, weight_decay=weight_decay)
+    optimal_lr = find_optimal_lr(model, train_loader, device, dataset_name, weight_decay=weight_decay)
     
     print(f"\n✅ Recommended max_lr for One Cycle LR: {optimal_lr:.6f}")
     print(f"💡 Update config.py with: 'lr': {optimal_lr:.6f}")
@@ -167,14 +158,25 @@ def run_lr_finder_for_stage(stage_name, dataset_name=None, num_iter=200):
 
 if __name__ == "__main__":
     import sys
+    from models import get_model
     
     if len(sys.argv) > 1:
-        stage = sys.argv[1]
-        print(f"Running LR finder for stage: {stage}")
-        run_lr_finder_for_stage(stage, stage)
+        dataset_name = sys.argv[1]
+        print(f"Running LR finder for dataset: {dataset_name}")
+        
+        # Get model and device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        from config import Config
+        Config.update_for_dataset(dataset_name)
+        model = get_model(model_name="resnet50", dataset_name=dataset_name)
+        model = model.to(device)
+        
+        run_lr_finder(model, dataset_name)
     else:
-        print("Usage: python lr_finder.py <stage_name>")
+        print("Usage: python lr_finder.py <dataset_name>")
         print("Example: python lr_finder.py tiny_imagenet")
         print("\nOr use in notebook:")
-        print("  from lr_finder import run_lr_finder_for_stage")
-        print("  optimal_lr = run_lr_finder_for_stage('tiny_imagenet')")
+        print("  from lr_finder import run_lr_finder")
+        print("  from models import get_model")
+        print("  model = get_model('resnet50', 'tiny_imagenet')")
+        print("  optimal_lr = run_lr_finder(model, 'tiny_imagenet')")
