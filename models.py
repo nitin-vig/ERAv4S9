@@ -151,8 +151,10 @@ def get_model(model_name="resnet50", dataset_name="imagenette", num_classes=None
     """Get the appropriate model for the dataset - supports multiple ImageNet variants"""
     
     if num_classes is None:
-        dataset_config = Config.get_dataset_config()
+        # Pass dataset_name to get the correct config for this stage
+        dataset_config = Config.get_dataset_config(dataset_name)
         num_classes = dataset_config["classes"]
+        print(f"📊 Creating model for {dataset_name} with {num_classes} classes")
     
     if dataset_name in ["imagenet", "imagenet_mini"]:
         if model_name == "resnet50":

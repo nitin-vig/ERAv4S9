@@ -368,8 +368,11 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
             
             # Filter out final layer (fc) if sizes are different
             if pretrained_fc_size and current_fc_size != pretrained_fc_size:
-                print(f"   ⚠️ Final layer size mismatch! Keeping new final layer (not loading from pretrained)")
+                print(f"   ⚠️  Final layer size mismatch! Filtering out fc layer")
+                print(f"       (Current: {current_fc_size} classes, Pretrained: {pretrained_fc_size} classes)")
                 pretrained_weights = {k: v for k, v in pretrained_weights.items() if 'fc' not in k}
+            else:
+                print(f"   ✅ Final layer sizes match: {current_fc_size} classes")
             
             model.load_state_dict(pretrained_weights, strict=False)
             print(f"✅ Loaded pretrained weights from {pretrained_weights_path}")
