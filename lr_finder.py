@@ -49,10 +49,13 @@ def find_optimal_lr(model, train_loader, device, dataset_name="tiny_imagenet", w
     
     # Run LR range test (linear mode for better results)
     print("Running LR range test (200 iterations)...")
+    
+    # More conservative end_lr to prevent excessive divergence
+    # For transfer learning and One Cycle LR, we typically don't need LR > 0.1
     lr_finder.range_test(
         train_loader, 
         start_lr=1e-7, 
-        end_lr=1.0, 
+        end_lr=0.1,  # More conservative end limit
         num_iter=200, 
         step_mode="linear"
     )
@@ -68,23 +71,64 @@ def find_optimal_lr(model, train_loader, device, dataset_name="tiny_imagenet", w
     min_loss_idx = np.argmin(losses)
     min_loss_lr = learning_rates[min_loss_idx]
     
-    # Find steepest descent point (best for One Cycle LR)
-    # Look for point where gradient changes from negative to positive
-    optimal_idx = min_loss_idx
-    for i in range(min_loss_idx - 10, 0, -1):
-        if i > 10:
-            recent_grad = np.mean(np.gradient(losses[max(0, i-5):i+5]))
-            if recent_grad < 0:  # Still decreasing
-                optimal_idx = i
-            else:
+    # Calculate gradients (derivative of loss w.r.t. LR)
+    # This tells us where loss decreases fastest
+    gradients = np.gradient(losses)
+    
+    # Find the point where gradient is most negative (steepest descent)
+    # but before the loss starts diverging
+    # We want to avoid the region right before min_loss where curve flattens
+    # and the region after where loss increases
+    
+    # Look for steepest descent in the first 80% of the range
+    search_range = int(0.8 * len(losses))
+    
+    # Find the most negative gradient before the minimum
+    steepest_idx = np.argmin(gradients[:min(search_range, min_loss_idx)])
+    
+    # Now look for a stable point before divergence
+    # Find where loss starts increasing significantly (divergence detection)
+    optimal_idx = steepest_idx
+    
+    # Starting from steepest descent, move forward looking for where
+    # loss starts to stabilize (gradient becomes less negative)
+    # We want to stop before loss starts increasing
+    for i in range(steepest_idx, min(min_loss_idx, len(losses)-5)):
+        # Check if loss is still decreasing smoothly
+        window_losses = losses[i:min(i+10, len(losses))]
+        if len(window_losses) >= 3:
+            window_gradient = np.mean(np.gradient(window_losses))
+            # If gradient becomes positive or near zero, we've hit the sweet spot
+            if window_gradient >= -0.01:  # Near zero or positive (stabilizing)
+                optimal_idx = max(i-2, steepest_idx)  # Back up a bit for safety
                 break
+        else:
+            optimal_idx = i
+            break
     
     suggested_lr = learning_rates[optimal_idx]
     
+    # Additional diagnostics
+    suggested_loss = losses[optimal_idx]
+    min_loss = min(losses)
+    
+    # Check for divergence warning
+    last_losses = losses[-10:]
+    loss_increase_count = sum(1 for i in range(len(last_losses)-1) if last_losses[i+1] > last_losses[i])
+    if loss_increase_count >= 7:  # Loss mostly increasing at the end
+        print("\n⚠️  WARNING: Loss diverging at high LR. Model may need lower learning rate!")
+    
     print(f"\n📊 LR Finder Results:")
-    print(f"   📉 Minimum loss: {min(losses):.4f} at LR={min_loss_lr:.6f}")
+    print(f"   📉 Minimum loss: {min_loss:.4f} at LR={min_loss_lr:.6f}")
+    print(f"   📊 Suggested loss: {suggested_loss:.4f} at LR={suggested_lr:.6f}")
     print(f"   ✅ Suggested max_lr: {suggested_lr:.6f}")
     print(f"   📈 LR range: {min(learning_rates):.2e} → {max(learning_rates):.2e}")
+    print(f"   📍 Suggested LR position: {optimal_idx}/{len(losses)} ({100*optimal_idx/len(losses):.1f}% through range)")
+    
+    # Warn if suggested LR seems too high
+    if suggested_lr > 0.05:
+        print(f"\n⚠️  WARNING: Suggested LR ({suggested_lr:.4f}) seems high.")
+        print(f"   Consider starting with lower LR (e.g., {suggested_lr/2:.4f}) and monitor for stability.")
     
     # Plot results
     print("\n📊 Plotting LR finder results...")
