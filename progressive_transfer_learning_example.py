@@ -9,19 +9,24 @@ Stages: ImageNette → Tiny ImageNet → ImageNet Mini → Full ImageNet
 """
 
 import torch
+import os
 from config import Config
 from dataset_loader import get_data_loaders
 from models import get_model
 from training_utils import train_model_with_transfer
 
-def progressive_transfer_learning():
-    """Train progressively across multiple stages with transfer learning"""
+def progressive_transfer_learning(resume_from_stage=None):
+    """Train progressively across multiple stages with transfer learning
+    
+    Args:
+        resume_from_stage: Name of stage to resume from (e.g., "tiny_imagenet", 
+                          "imagenet_mini", "imagenet"). If None, starts from Stage 1.
+    """
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
     # Create model save directory
-    import os
     os.makedirs(Config.SAVE_MODEL_PATH, exist_ok=True)
     
     stages = [
@@ -47,11 +52,40 @@ def progressive_transfer_learning():
         }
     ]
     
+    # Handle resuming from a specific stage
+    start_idx = 0
     pretrained_weights_path = None
+    total_stages = len(stages)  # Total number of stages
     
-    for i, stage in enumerate(stages, 1):
+    if resume_from_stage:
+        # Find the stage index
+        stage_names = [s["name"] for s in stages]
+        if resume_from_stage not in stage_names:
+            raise ValueError(f"Unknown stage: {resume_from_stage}. Available stages: {stage_names}")
+        
+        start_idx = stage_names.index(resume_from_stage)
+        
+        # Find pretrained weights from previous stage
+        if start_idx > 0:
+            prev_stage_name = stages[start_idx - 1]["name"]
+            weights_file = f"{Config.SAVE_MODEL_PATH}/weights_for_{resume_from_stage}.pth"
+            
+            if os.path.exists(weights_file):
+                pretrained_weights_path = weights_file
+                print(f"✅ Resuming from {resume_from_stage} with weights from {prev_stage_name}")
+            else:
+                print(f"⚠️  Weights file not found: {weights_file}")
+                print(f"   Starting {resume_from_stage} without pretrained weights")
+        
+        # Slice stages to start from resume point
+        stages = stages[start_idx:]
+        print(f"\n📌 Resuming training from Stage {start_idx + 1}/{total_stages}: {resume_from_stage}")
+    else:
+        print(f"\n🚀 Starting training from Stage 1/{total_stages}")
+    
+    for i, stage in enumerate(stages, start=start_idx + 1):
         print(f"\n{'='*80}")
-        print(f"STAGE {i}/{len(stages)}: {stage['name'].upper()}")
+        print(f"STAGE {i}/{total_stages}: {stage['name'].upper()}")
         print(f"{'='*80}")
         print(stage['description'])
         print(f"Previous weights: {pretrained_weights_path}")
@@ -102,7 +136,20 @@ def progressive_transfer_learning():
 
 
 if __name__ == "__main__":
-    # Optional: Enable only specific stages for testing
-    # For now, run all stages
-    progressive_transfer_learning()
+    import sys
+    
+    # Parse command line arguments
+    if len(sys.argv) > 1:
+        resume_stage = sys.argv[1]
+        print(f"Resuming from stage: {resume_stage}")
+        progressive_transfer_learning(resume_from_stage=resume_stage)
+    else:
+        # Run all stages from the beginning
+        print("Running all stages from Stage 1")
+        print("\nTo resume from a specific stage, run:")
+        print("  python progressive_transfer_learning_example.py tiny_imagenet")
+        print("  python progressive_transfer_learning_example.py imagenet_mini")
+        print("  python progressive_transfer_learning_example.py imagenet")
+        print()
+        progressive_transfer_learning()
 
