@@ -262,24 +262,27 @@ def train_model(model, train_loader, test_loader, device, config=None):
     # Get dataset-specific configuration
     dataset_config = config.get_dataset_config()
     
+    # Calculate steps per epoch and get scheduler info
+    steps_per_epoch = len(train_loader)
+    scheduler_name = dataset_config.get("scheduler", "reduce_lr")
+    max_lr = dataset_config.get("lr", config.LEARNING_RATE)
+    
+    print(f"🔧 Optimizer: {dataset_config.get('optimizer')}, Max LR: {max_lr}, Scheduler: {scheduler_name}")
+    
     # Get optimizer, scheduler, and criterion based on dataset
     optimizer = get_optimizer(
         model, 
         optimizer_name=dataset_config.get("optimizer", "adamw"), 
-        lr=dataset_config.get("lr", config.LEARNING_RATE), 
+        lr=max_lr, 
         weight_decay=config.WEIGHT_DECAY
     )
-    
-    # Calculate steps per epoch for One Cycle LR
-    steps_per_epoch = len(train_loader)
-    scheduler_name = dataset_config.get("scheduler", "reduce_lr")
     
     # Initialize scheduler
     if scheduler_name.lower() == "one_cycle":
         scheduler = get_scheduler(
             optimizer,
             scheduler_name=scheduler_name,
-            max_lr=dataset_config.get("lr", config.LEARNING_RATE),
+            max_lr=max_lr,
             epochs=config.NUM_EPOCHS,
             steps_per_epoch=steps_per_epoch
         )
@@ -387,24 +390,27 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
     # Get dataset-specific configuration
     dataset_config = config.get_dataset_config()
     
+    # Calculate steps per epoch and get scheduler info
+    steps_per_epoch = len(train_loader)
+    scheduler_name = dataset_config.get("scheduler", "reduce_lr")
+    max_lr = dataset_config.get("lr", config.LEARNING_RATE)
+    
+    print(f"🔧 Optimizer: {dataset_config.get('optimizer')}, Max LR: {max_lr}, Scheduler: {scheduler_name}")
+    
     # Get optimizer, scheduler, and criterion based on dataset
     optimizer = get_optimizer(
         model, 
         optimizer_name=dataset_config.get("optimizer", "adamw"), 
-        lr=dataset_config.get("lr", config.LEARNING_RATE), 
+        lr=max_lr, 
         weight_decay=config.WEIGHT_DECAY
     )
-    
-    # Calculate steps per epoch for One Cycle LR
-    steps_per_epoch = len(train_loader)
-    scheduler_name = dataset_config.get("scheduler", "reduce_lr")
     
     # Initialize scheduler
     if scheduler_name.lower() == "one_cycle":
         scheduler = get_scheduler(
             optimizer,
             scheduler_name=scheduler_name,
-            max_lr=dataset_config.get("lr", config.LEARNING_RATE),
+            max_lr=max_lr,
             epochs=config.NUM_EPOCHS,
             steps_per_epoch=steps_per_epoch
         )
