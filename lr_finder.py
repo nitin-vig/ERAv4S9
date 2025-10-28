@@ -1,196 +1,111 @@
 """
 Learning Rate Finder for One Cycle LR Optimization
 
-This utility helps find the optimal max_lr for One Cycle LR scheduling
-by running a short training session with exponentially increasing LR.
+Uses pytorch-lr-finder library for finding optimal max_lr.
 """
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
-def find_optimal_lr(model, train_loader, device, start_lr=1e-7, end_lr=1.0, num_iter=200):
+try:
+    from torch_lr_finder import LRFinder
+    HAS_LRFINDER = True
+except ImportError:
+    print("⚠️ pytorch-lr-finder not installed.")
+    print("Install with: pip install torch-lr-finder")
+    HAS_LRFINDER = False
+    LRFinder = None
+
+
+def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_imagenet"):
     """
-    Learning Rate Finder to determine optimal max_lr for One Cycle LR
-    
-    Trains the model with exponentially increasing learning rate and tracks the loss.
-    The optimal max_lr is typically where the loss decreases most rapidly.
+    Find optimal learning rate for One Cycle LR using pytorch-lr-finder
     
     Args:
         model: Model to train
         train_loader: Training data loader
-        device: Device to use
-        start_lr: Starting learning rate (default: 1e-7)
-        end_lr: Ending learning rate (default: 1.0)
-        num_iter: Number of iterations to run (default: 200)
+        device: Device (cuda/cpu)
+        dataset_name: Name of dataset (for logging)
         
     Returns:
-        tuple: (learning_rates, losses) arrays
+        tuple: (suggested_min_lr, suggested_max_lr) for One Cycle LR
     """
-    model.train()
-    model = model.to(device)
+    if not HAS_LRFINDER:
+        raise ImportError("pytorch-lr-finder is required. Install with: pip install torch-lr-finder")
     
-    # Use the same optimizer as your actual training
-    optimizer = optim.SGD(model.parameters(), lr=start_lr, weight_decay=1e-4, momentum=0.9)
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-    
-    lrs = []
-    losses = []
-    
-    # Create exponential learning rate range
-    lr_mult = (end_lr / start_lr) ** (1 / num_iter)
-    
-    print(f"🔍 Running LR Finder...")
-    print(f"   LR range: {start_lr:.2e} → {end_lr:.2e}")
-    print(f"   Iterations: {num_iter}")
-    
-    pbar = tqdm(enumerate(train_loader), total=num_iter, desc="Finding optimal LR")
-    
-    for batch_idx, (data, target) in pbar:
-        if batch_idx >= num_iter:
-            break
-            
-        # Update LR exponentially
-        current_lr = start_lr * (lr_mult ** batch_idx)
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = current_lr
-        
-        data, target = data.to(device), target.to(device)
-        
-        optimizer.zero_grad()
-        output = model(data)
-        loss = criterion(output, target)
-        loss.backward()
-        
-        # Optional: Gradient clipping for stability
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        
-        optimizer.step()
-        
-        lrs.append(current_lr)
-        losses.append(loss.item())
-        
-        pbar.set_description(f"LR: {current_lr:.6f}, Loss: {loss.item():.4f}")
-        
-        # Stop early if loss explodes
-        if loss.item() > 10 or np.isnan(loss.item()):
-            print(f"\n⚠️  Loss exploded at LR={current_lr:.6f}")
-            break
-    
-    return np.array(lrs), np.array(losses)
-
-def plot_lr_finder(lrs, losses, save_path=None):
-    """
-    Plot LR finder results and suggest optimal max_lr
-    
-    Args:
-        lrs: Array of learning rates
-        losses: Array of losses
-        save_path: Optional path to save the plot
-    """
-    plt.figure(figsize=(12, 6))
-    
-    # Plot 1: Loss vs LR
-    plt.subplot(1, 2, 1)
-    plt.plot(lrs, losses)
-    plt.xlabel('Learning Rate (log scale)')
-    plt.ylabel('Loss')
-    plt.title('LR Finder: Loss vs Learning Rate')
-    plt.xscale('log')
-    plt.grid(True)
-    
-    # Find points of interest
-    # Point of steepest descent (good for max_lr)
-    if len(losses) > 1:
-        gradients = np.gradient(losses)
-        min_slope_idx = np.argmin(gradients)
-        min_slope_lr = lrs[min_slope_idx]
-        
-        # Minimum loss point
-        min_loss_idx = np.argmin(losses)
-        min_loss_lr = lrs[min_loss_idx]
-        
-        plt.axvline(x=min_slope_lr, color='green', linestyle='--', label=f'Steepest descent: {min_slope_lr:.6f}')
-        plt.axvline(x=min_loss_lr, color='red', linestyle='--', label=f'Min loss: {min_loss_lr:.6f}')
-        plt.legend()
-    
-    # Plot 2: Smoothed loss
-    plt.subplot(1, 2, 2)
-    if len(losses) > 10:
-        # Smooth the loss curve
-        window = min(10, len(losses) // 10)
-        smoothed = np.convolve(losses, np.ones(window)/window, mode='valid')
-        smoothed_lrs = lrs[:len(smoothed)]
-        plt.plot(smoothed_lrs, smoothed)
-    else:
-        plt.plot(lrs, losses)
-    
-    plt.xlabel('Learning Rate (log scale)')
-    plt.ylabel('Smoothed Loss')
-    plt.title('Smoothed Loss vs Learning Rate')
-    plt.xscale('log')
-    plt.grid(True)
-    
-    plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        print(f"📊 Plot saved to: {save_path}")
-    
-    plt.show()
-    
-    # Print recommendations
-    print("\n" + "="*60)
-    print("📊 LR FINDER RESULTS")
+    print(f"🔍 Finding optimal LR for {dataset_name} using pytorch-lr-finder")
     print("="*60)
     
-    if len(losses) > 1:
-        gradients = np.gradient(losses)
-        min_slope_idx = np.argmin(gradients)
-        min_slope_lr = lrs[min_slope_idx]
-        min_slope_loss = losses[min_slope_idx]
-        
-        # Find where loss starts increasing
-        increasing_idx = None
-        for i in range(len(gradients)):
-            if gradients[i] > 0 and losses[i] > np.min(losses) * 1.1:
-                increasing_idx = i
-                break
-        
-        if increasing_idx:
-            optimal_lr = lrs[increasing_idx]
-            print(f"\n✅ Recommended max_lr for One Cycle: {optimal_lr:.6f}")
-            print(f"   (Point where loss stops decreasing)")
-        else:
-            optimal_lr = min_slope_lr
-            print(f"\n✅ Recommended max_lr for One Cycle: {optimal_lr:.6f}")
-            print(f"   (Steepest descent point)")
-        
-        print(f"\n📈 Steepest descent LR: {min_slope_lr:.6f}")
-        print(f"📉 Minimum loss LR: {lrs[np.argmin(losses)]:.6f}")
-        print(f"\n💡 For One Cycle LR, use max_lr ≈ {optimal_lr:.4f}")
-        print(f"   This will give you:")
-        print(f"   - Initial LR: {optimal_lr/25:.6f}")
-        print(f"   - Peak LR: {optimal_lr:.6f}")
-        print(f"   - Final LR: {optimal_lr/10000:.9f}")
-        
-        return optimal_lr
-    else:
-        print("⚠️  Not enough data to recommend optimal LR")
-        return None
+    # Use SGD optimizer (same as actual training)
+    optimizer = optim.SGD(model.parameters(), lr=1e-8, weight_decay=1e-4, momentum=0.9)
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    
+    # Create LR finder
+    lr_finder = LRFinder(model, optimizer, criterion, device=device)
+    
+    # Run LR range test (linear mode for better results)
+    print("Running LR range test (200 iterations)...")
+    lr_finder.range_test(
+        train_loader, 
+        start_lr=1e-7, 
+        end_lr=1.0, 
+        num_iter=200, 
+        step_mode="linear"
+    )
+    
+    # Get suggestion
+    suggested_lr = lr_finder.suggestion()
+    
+    # Extract history
+    learning_rates = lr_finder.history['lr']
+    losses = lr_finder.history['loss']
+    
+    print(f"\n📊 LR Finder Results:")
+    print(f"   ✅ Suggested LR: {suggested_lr:.6f}")
+    print(f"   📉 Minimum loss: {min(losses):.4f}")
+    print(f"   📈 LR range: {min(learning_rates):.2e} → {max(learning_rates):.2e}")
+    
+    # Plot results
+    print("\n📊 Plotting LR finder results...")
+    lr_finder.plot(skip_end=0, skip_start=0)
+    plt.tight_layout()
+    plt.show()
+    
+    # Calculate One Cycle LR parameters
+    print("\n💡 For One Cycle LR scheduler:")
+    print(f"   max_lr = {suggested_lr:.6f}")
+    print(f"   This gives you:")
+    print(f"   - Initial LR: {suggested_lr/25:.6f} (warmup starts)")
+    print(f"   - Peak LR: {suggested_lr:.6f} (at 30% through training)")
+    print(f"   - Final LR: {suggested_lr/10000:.9f} (end of training)")
+    
+    return suggested_lr
 
-def run_lr_finder_for_stage(stage_name, dataset_name, num_iter=200):
+
+def run_lr_finder_for_stage(stage_name, dataset_name=None, num_iter=200):
     """
     Convenience function to run LR finder for a specific stage
     
     Args:
         stage_name: Name of the stage (e.g., "tiny_imagenet")
-        dataset_name: Dataset to use
+        dataset_name: Dataset to use (defaults to stage_name)
         num_iter: Number of iterations
+        
+    Returns:
+        Optimal learning rate for One Cycle LR
     """
+    if not HAS_LRFINDER:
+        raise ImportError(
+            "pytorch-lr-finder is required. Install with:\n"
+            "  !pip install torch-lr-finder\n"
+            "  # Then run this cell again"
+        )
+    
+    if dataset_name is None:
+        dataset_name = stage_name
+    
     from models import get_model
     from dataset_loader import get_data_loaders
     from config import Config
@@ -203,7 +118,7 @@ def run_lr_finder_for_stage(stage_name, dataset_name, num_iter=200):
     dataset_config = Config.get_dataset_config(dataset_name)
     
     print(f"\n{'='*60}")
-    print(f"LR Finder for {stage_name}")
+    print(f"LR Finder for: {stage_name}")
     print(f"{'='*60}")
     print(f"Dataset: {dataset_name}")
     print(f"Image size: {dataset_config['image_size']}")
@@ -219,12 +134,13 @@ def run_lr_finder_for_stage(stage_name, dataset_name, num_iter=200):
     model = get_model(model_name="resnet50", dataset_name=dataset_name)
     
     # Run LR finder
-    lrs, losses = find_optimal_lr(model, train_loader, device, num_iter=num_iter)
+    optimal_lr = find_optimal_lr_for_stage(model, train_loader, device, dataset_name)
     
-    # Plot and get recommendation
-    optimal_lr = plot_lr_finder(lrs, losses, save_path=f"lr_finder_{dataset_name}.png")
+    print(f"\n✅ Recommended max_lr for One Cycle LR: {optimal_lr:.6f}")
+    print(f"💡 Update config.py with: 'lr': {optimal_lr:.6f}")
     
     return optimal_lr
+
 
 if __name__ == "__main__":
     import sys
@@ -236,4 +152,6 @@ if __name__ == "__main__":
     else:
         print("Usage: python lr_finder.py <stage_name>")
         print("Example: python lr_finder.py tiny_imagenet")
-
+        print("\nOr use in notebook:")
+        print("  from lr_finder import run_lr_finder_for_stage")
+        print("  optimal_lr = run_lr_finder_for_stage('tiny_imagenet')")
