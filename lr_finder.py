@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
+import numpy as np
 
 try:
     from torch_lr_finder import LRFinder
@@ -55,16 +56,33 @@ def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_im
         step_mode="linear"
     )
     
-    # Get suggestion
-    suggested_lr = lr_finder.suggestion()
-    
     # Extract history
     learning_rates = lr_finder.history['lr']
     losses = lr_finder.history['loss']
     
+    # Find optimal LR (point where loss decreases fastest)
+    # This is typically 1 order of magnitude before the minimum
+    
+    # Find where loss starts increasing (inflection point)
+    min_loss_idx = np.argmin(losses)
+    min_loss_lr = learning_rates[min_loss_idx]
+    
+    # Find steepest descent point (best for One Cycle LR)
+    # Look for point where gradient changes from negative to positive
+    optimal_idx = min_loss_idx
+    for i in range(min_loss_idx - 10, 0, -1):
+        if i > 10:
+            recent_grad = np.mean(np.gradient(losses[max(0, i-5):i+5]))
+            if recent_grad < 0:  # Still decreasing
+                optimal_idx = i
+            else:
+                break
+    
+    suggested_lr = learning_rates[optimal_idx]
+    
     print(f"\n📊 LR Finder Results:")
-    print(f"   ✅ Suggested LR: {suggested_lr:.6f}")
-    print(f"   📉 Minimum loss: {min(losses):.4f}")
+    print(f"   📉 Minimum loss: {min(losses):.4f} at LR={min_loss_lr:.6f}")
+    print(f"   ✅ Suggested max_lr: {suggested_lr:.6f}")
     print(f"   📈 LR range: {min(learning_rates):.2e} → {max(learning_rates):.2e}")
     
     # Plot results
@@ -73,8 +91,11 @@ def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_im
     plt.tight_layout()
     plt.show()
     
+    # Reset the finder
+    lr_finder.reset()
+    
     # Calculate One Cycle LR parameters
-    print("\n💡 For One Cycle LR scheduler:")
+    print("\n💡 For One Cycle LR scheduler, use:")
     print(f"   max_lr = {suggested_lr:.6f}")
     print(f"   This gives you:")
     print(f"   - Initial LR: {suggested_lr/25:.6f} (warmup starts)")
