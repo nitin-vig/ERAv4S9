@@ -20,7 +20,7 @@ except ImportError:
     LRFinder = None
 
 
-def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_imagenet"):
+def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_imagenet", weight_decay=1e-3):
     """
     Find optimal learning rate for One Cycle LR using pytorch-lr-finder
     
@@ -29,6 +29,7 @@ def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_im
         train_loader: Training data loader
         device: Device (cuda/cpu)
         dataset_name: Name of dataset (for logging)
+        weight_decay: Weight decay for the optimizer
         
     Returns:
         tuple: (suggested_min_lr, suggested_max_lr) for One Cycle LR
@@ -39,8 +40,8 @@ def find_optimal_lr_for_stage(model, train_loader, device, dataset_name="tiny_im
     print(f"🔍 Finding optimal LR for {dataset_name} using pytorch-lr-finder")
     print("="*60)
     
-    # Use SGD optimizer (same as actual training)
-    optimizer = optim.SGD(model.parameters(), lr=1e-8, weight_decay=1e-4, momentum=0.9)
+    # Use SGD optimizer with CORRECT weight_decay
+    optimizer = optim.SGD(model.parameters(), lr=1e-8, weight_decay=weight_decay, momentum=0.9)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     
     # Create LR finder
@@ -155,7 +156,8 @@ def run_lr_finder_for_stage(stage_name, dataset_name=None, num_iter=200):
     model = get_model(model_name="resnet50", dataset_name=dataset_name)
     
     # Run LR finder
-    optimal_lr = find_optimal_lr_for_stage(model, train_loader, device, dataset_name)
+    weight_decay = dataset_config.get("weight_decay", 1e-3)
+    optimal_lr = find_optimal_lr_for_stage(model, train_loader, device, dataset_name, weight_decay=weight_decay)
     
     print(f"\n✅ Recommended max_lr for One Cycle LR: {optimal_lr:.6f}")
     print(f"💡 Update config.py with: 'lr': {optimal_lr:.6f}")
