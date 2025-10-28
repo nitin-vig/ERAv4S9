@@ -99,9 +99,9 @@ def find_optimal_lr(model, train_loader, device, dataset_name="tiny_imagenet", w
     print("\n💡 For One Cycle LR scheduler, use:")
     print(f"   max_lr = {suggested_lr:.6f}")
     print(f"   This gives you:")
-    print(f"   - Initial LR: {suggested_lr/25:.6f} (warmup starts)")
+    print(f"   - Initial LR: {suggested_lr/25:.6f} (warmup starts, div_factor=25)")
     print(f"   - Peak LR: {suggested_lr:.6f} (at 30% through training)")
-    print(f"   - Final LR: {suggested_lr/10000:.9f} (end of training)")
+    print(f"   - Final LR: {suggested_lr/250000:.9f} (end of training, final_div_factor=10000)")
     
     return suggested_lr
 
