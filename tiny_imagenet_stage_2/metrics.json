@@ -1,0 +1,24 @@
+{
+  "stage": "tiny_imagenet",
+  "stage_number": 1,
+  "final_train_loss": 1.7181618985007792,
+  "final_train_acc": 75.641,
+  "final_test_loss": 2.3868649311065675,
+  "final_test_acc": 57.45,
+  "config": {
+    "dataset": "tiny_imagenet",
+    "classes": 200,
+    "image_size": 64,
+    "epochs": 50,
+    "batch_size": 256,
+    "lr": 0.037,
+    "optimizer": "sgd",
+    "scheduler": "one_cycle",
+    "weight_decay": 0.001,
+    "label_smoothing": 0.1,
+    "mixup_alpha": 0.3,
+    "description": "LR: 0.10 (safe max_lr for transfer learning with pretrained weights)",
+    "enabled": true,
+    "priority": 2
+  }
+}
