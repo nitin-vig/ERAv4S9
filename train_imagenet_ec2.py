@@ -420,17 +420,35 @@ def main():
     if use_cuda:
         cudnn.benchmark = True
     
-    # Update config for ImageNet
-    Config.update_for_dataset('imagenet')
+    # Update config for specified dataset
+    Config.update_for_dataset(args.dataset)
     Config.DATA_ROOT = args.data_root
     
     # Verify dataset structure
     if not args.skip_dataset_check and ((not is_distributed) or (is_distributed and rank == 0)):
-        is_valid, imagenet_path, message = verify_imagenet_structure(args.data_root)
-        logger.info(message)
-        if not is_valid:
-            logger.error("Please download and organize ImageNet dataset before training")
-            return
+        if args.dataset == 'imagenet':
+            is_valid, imagenet_path, message = verify_imagenet_structure(args.data_root)
+            logger.info(message)
+            if not is_valid:
+                logger.error("Please download and organize ImageNet dataset before training")
+                return
+        elif args.dataset == 'tiny_imagenet':
+            # For tiny_imagenet, check if the dataset directory exists
+            tiny_imagenet_path = args.data_root
+            if not os.path.exists(tiny_imagenet_path):
+                logger.error(f"❌ Tiny ImageNet dataset not found at {tiny_imagenet_path}")
+                return
+            
+            # Check for required subdirectories
+            required_dirs = ['train', 'val']
+            missing_dirs = [d for d in required_dirs if not os.path.exists(os.path.join(tiny_imagenet_path, d))]
+            if missing_dirs:
+                logger.error(f"❌ Missing required directories in Tiny ImageNet: {missing_dirs}")
+                logger.error(f"Expected structure: {tiny_imagenet_path}/{{train,val}}/")
+                return
+            
+            logger.info(f"✅ Tiny ImageNet dataset found at {tiny_imagenet_path}")
+            imagenet_path = tiny_imagenet_path
     
     # Override config if provided
     if args.batch_size:
@@ -438,19 +456,19 @@ def main():
     if args.epochs:
         Config.NUM_EPOCHS = args.epochs
     
-    dataset_config = Config.get_dataset_config('imagenet')
+    dataset_config = Config.get_dataset_config(args.dataset)
     
     if (not is_distributed) or (is_distributed and rank == 0):
-        logger.info(f"Dataset: ImageNet")
+        logger.info(f"Dataset: {args.dataset.title()}")
         logger.info(f"Batch size: {Config.BATCH_SIZE}")
         logger.info(f"Epochs: {Config.NUM_EPOCHS}")
         logger.info(f"Learning rate: {dataset_config.get('lr', Config.LEARNING_RATE)}")
     
     # Get data loaders
     if (not is_distributed) or (is_distributed and rank == 0):
-        logger.info(f"📂 Loading ImageNet dataset from: {args.data_root}...")
+        logger.info(f"📂 Loading {args.dataset.title()} dataset from: {args.data_root}...")
     
-    train_loader, test_loader = get_data_loaders('imagenet')
+    train_loader, test_loader = get_data_loaders(args.dataset)
     
     # Compute dataset statistics if requested
     if args.compute_stats and ((not is_distributed) or (is_distributed and rank == 0)):
