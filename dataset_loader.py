@@ -593,6 +593,36 @@ def get_imagenet_mini_dataset(dataset_name="imagenet_mini"):
     
     return train_dataset, test_dataset
 
+# ---- ToyTestDataset for local testing ----
+class ToyTestDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.samples = [
+            (os.path.join(root_dir, c, f), i)
+            for i, c in enumerate(sorted(os.listdir(root_dir)))
+            for f in os.listdir(os.path.join(root_dir, c)) if f.endswith(".jpg")
+        ]
+        self.transform = transform
+    def __len__(self):
+        return len(self.samples)
+    def __getitem__(self, idx):
+        img_path, label = self.samples[idx]
+        img = Image.open(img_path).convert("RGB")
+        import numpy as np
+        if self.transform:
+            img = self.transform(image=np.array(img))["image"]
+        return img, label
+
+
+def get_toy_test_dataset(dataset_name="toy_test"):
+    dataset_config = Config.get_dataset_config(dataset_name)
+    root = "toy_test_dataset"
+    train_transform = get_albumentations_transforms(dataset_config, is_training=True)
+    test_transform = get_albumentations_transforms(dataset_config, is_training=False)
+    train_dataset = ToyTestDataset(root, transform=train_transform)
+    test_dataset = ToyTestDataset(root, transform=test_transform)
+    return train_dataset, test_dataset
+
 def get_data_loaders(dataset_name="imagenette"):
     """Get data loaders for the specified dataset"""
     
@@ -611,6 +641,8 @@ def get_data_loaders(dataset_name="imagenette"):
         train_dataset, test_dataset = get_tiny_imagenet_dataset(dataset_name)
     elif dataset_name == "imagenette":
         train_dataset, test_dataset = get_imagenette_dataset(dataset_name)
+    elif dataset_name == "toy_test":
+        train_dataset, test_dataset = get_toy_test_dataset(dataset_name)
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
     

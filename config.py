@@ -82,6 +82,21 @@ class ProgressiveConfig:
             "description": "Final full-scale training - conservative LR for stable training",
             "enabled": True,
             "priority": 4
+        },
+        "toy_test": {
+            "dataset": "toy_test",
+            "classes": 2,
+            "image_size": 224,
+            "epochs": 2,
+            "batch_size": 2,
+            "lr": 0.01,
+            "optimizer": "sgd",
+            "scheduler": "step",
+            "weight_decay": 0.0,
+            "label_smoothing": 0.0,
+            "description": "Tiny test on fake dataset",
+            "enabled": True,
+            "priority": 10
         }
     }
     
