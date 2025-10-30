@@ -19,7 +19,7 @@ albumentations>=1.3.0
 requests>=2.25.0
 
 # Learning rate finder
-torch-lr-finder>=0.3.0
+torch-lr-finder>=0.2.2
 
 # Optional: Google Colab support
 # google-colab  # Uncomment if running in Colab
