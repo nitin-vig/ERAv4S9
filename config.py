@@ -151,8 +151,8 @@ class ProgressiveConfig:
                 "hue": 0.1
             },
             "normalize": {
-                "mean": [0.485, 0.456, 0.406],
-                "std": [0.229, 0.224, 0.225]
+                "mean": [0.482, 0.457, 0.407],
+                "std": [0.229, 0.225, 0.226]
             }
         },
         "val": {
@@ -160,8 +160,8 @@ class ProgressiveConfig:
             "crop": 224,
             "horizontal_flip": False,
             "normalize": {
-                "mean": [0.485, 0.456, 0.406],
-                "std": [0.229, 0.224, 0.225]
+                "mean": [0.482, 0.457, 0.407],
+                "std": [0.229, 0.225, 0.226]
             }
         }
     }
