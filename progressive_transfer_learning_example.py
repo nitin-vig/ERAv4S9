@@ -5,7 +5,7 @@ Example: Progressive Transfer Learning Across Stages
 This example shows how to train progressively across stages,
 transferring weights from each stage to the next.
 
-Stages: ImageNette → Tiny ImageNet → ImageNet Mini → Full ImageNet
+Stages: ImageNette → Tiny ImageNet → ImageNet Mini → ImageNet-1k
 """
 
 import torch
@@ -20,7 +20,7 @@ def progressive_transfer_learning(resume_from_stage=None):
     
     Args:
         resume_from_stage: Name of stage to resume from (e.g., "tiny_imagenet", 
-                          "imagenet_mini", "imagenet"). If None, starts from Stage 1.
+                          "imagenet_mini", "imagenet1k"). If None, starts from Stage 1.
     """
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -42,13 +42,13 @@ def progressive_transfer_learning(resume_from_stage=None):
         },
         {
             "name": "imagenet_mini",
-            "next": "imagenet",
+            "next": "imagenet1k",
             "description": "Stage 3: Full complexity with ImageNet Mini (1000 classes)"
         },
         {
-            "name": "imagenet",
+            "name": "imagenet1k",
             "next": None,
-            "description": "Stage 4: Final training on Full ImageNet (1000 classes)"
+            "description": "Stage 4: Final training on ImageNet-1k (1000 classes)"
         }
     ]
     
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         print("\nTo resume from a specific stage, run:")
         print("  python progressive_transfer_learning_example.py tiny_imagenet")
         print("  python progressive_transfer_learning_example.py imagenet_mini")
-        print("  python progressive_transfer_learning_example.py imagenet")
+        print("  python progressive_transfer_learning_example.py imagenet1k")
         print()
         progressive_transfer_learning()
 

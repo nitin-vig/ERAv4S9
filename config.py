@@ -64,12 +64,12 @@ class ProgressiveConfig:
             "scheduler": "one_cycle",
             "weight_decay": 1e-3,
             "label_smoothing": 0.1,
-            "description": "Full ImageNet complexity with subset data - One Cycle LR for fast convergence",
+            "description": "ImageNet-1k complexity with subset data - One Cycle LR for fast convergence",
             "enabled": True,
             "priority": 3
         },
-        "imagenet": {
-            "dataset": "imagenet",
+        "imagenet1k": {
+            "dataset": "imagenet1k",
             "classes": 1000,
             "image_size": 224,
             "epochs": 100,
@@ -281,13 +281,13 @@ class PresetConfigs:
         config.modify_stage_config("imagenette", epochs=5)
         config.modify_stage_config("tiny_imagenet", epochs=10)
         config.modify_stage_config("imagenet_mini", epochs=15)
-        config.modify_stage_config("imagenet", epochs=20)
+        config.modify_stage_config("imagenet1k", epochs=20)
         
         # Reduce batch sizes for memory efficiency
         config.modify_stage_config("imagenette", batch_size=32)
         config.modify_stage_config("tiny_imagenet", batch_size=64)
         config.modify_stage_config("imagenet_mini", batch_size=48)
-        config.modify_stage_config("imagenet", batch_size=64)
+        config.modify_stage_config("imagenet1k", batch_size=64)
         
         return config
     
@@ -300,19 +300,19 @@ class PresetConfigs:
         config.modify_stage_config("imagenette", epochs=30)
         config.modify_stage_config("tiny_imagenet", epochs=50)
         config.modify_stage_config("imagenet_mini", epochs=60)
-        config.modify_stage_config("imagenet", epochs=90)
+        config.modify_stage_config("imagenet1k", epochs=90)
         
         # Use larger batch sizes
         config.modify_stage_config("imagenette", batch_size=128)
         config.modify_stage_config("tiny_imagenet", batch_size=256)
         config.modify_stage_config("imagenet_mini", batch_size=192)
-        config.modify_stage_config("imagenet", batch_size=256)
+        config.modify_stage_config("imagenet1k", batch_size=256)
         
         # Enable additional regularization
         config.modify_stage_config("imagenette", weight_decay=1e-3)
         config.modify_stage_config("tiny_imagenet", weight_decay=1e-3)
         config.modify_stage_config("imagenet_mini", weight_decay=1e-3)
-        config.modify_stage_config("imagenet", weight_decay=1e-3)
+        config.modify_stage_config("imagenet1k", weight_decay=1e-3)
         
         return config
     
@@ -325,7 +325,7 @@ class PresetConfigs:
         config.modify_stage_config("imagenette", batch_size=16)
         config.modify_stage_config("tiny_imagenet", batch_size=32)
         config.modify_stage_config("imagenet_mini", batch_size=24)
-        config.modify_stage_config("imagenet", batch_size=32)
+        config.modify_stage_config("imagenet1k", batch_size=32)
         
         # Reduce data loading workers
         config.DATA_LOADING["num_workers"] = 2
@@ -345,19 +345,19 @@ class PresetConfigs:
         config.modify_stage_config("imagenette", epochs=10)
         config.modify_stage_config("tiny_imagenet", epochs=20)
         config.modify_stage_config("imagenet_mini", epochs=25)
-        config.modify_stage_config("imagenet", epochs=40)
+        config.modify_stage_config("imagenet1k", epochs=40)
         
         # Larger batch sizes for faster training
         config.modify_stage_config("imagenette", batch_size=128)
         config.modify_stage_config("tiny_imagenet", batch_size=256)
         config.modify_stage_config("imagenet_mini", batch_size=192)
-        config.modify_stage_config("imagenet", batch_size=256)
+        config.modify_stage_config("imagenet1k", batch_size=256)
         
         # Higher learning rates
         config.modify_stage_config("imagenette", lr=0.002)
         config.modify_stage_config("tiny_imagenet", lr=0.001)
         config.modify_stage_config("imagenet_mini", lr=0.0006)
-        config.modify_stage_config("imagenet", lr=0.2)
+        config.modify_stage_config("imagenet1k", lr=0.2)
         
         return config
 

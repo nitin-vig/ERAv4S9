@@ -1,6 +1,6 @@
 # Progressive ImageNet Training Strategy
 
-A comprehensive multi-stage training approach that scales from smaller ImageNet datasets to the full dataset, optimizing for both high accuracy and training speed.
+A comprehensive multi-stage training approach that scales from smaller ImageNet datasets to ImageNet-1k, optimizing for both high accuracy and training speed.
 
 ## 🎯 Strategy Overview
 
@@ -12,8 +12,8 @@ This progressive training strategy implements a **4-stage approach** that gradua
 |-------|---------|---------|------------|--------|---------|
 | **Stage 1** | ImageNette | 10 | 224×224 | 20 | Quick warmup & architecture validation |
 | **Stage 2** | Tiny ImageNet | 200 | 64×64 | 30 | Medium complexity training |
-| **Stage 3** | ImageNet Mini | 1000 | 224×224 | 40 | Full ImageNet complexity with subset |
-| **Stage 4** | Full ImageNet | 1000 | 224×224 | 60 | Final full-scale training |
+| **Stage 3** | ImageNet Mini | 1000 | 224×224 | 40 | ImageNet-1k complexity with subset |
+| **Stage 4** | ImageNet-1k | 1000 | 224×224 | 60 | Final full-scale training |
 
 ## 🚀 Key Benefits
 
@@ -87,7 +87,7 @@ This progressive training strategy implements a **4-stage approach** that gradua
 }
 ```
 
-#### Stage 4: Full ImageNet (Aggressive)
+#### Stage 4: ImageNet-1k (Aggressive)
    ```python
 {
     "epochs": 60,
@@ -160,13 +160,13 @@ model.fc = nn.Linear(model.fc.in_features, config["classes"])
 - **Stage 1**: ~30 minutes (ImageNette)
 - **Stage 2**: ~1-2 hours (Tiny ImageNet)
 - **Stage 3**: ~2-3 hours (ImageNet Mini)
-- **Stage 4**: ~5-7 hours (Full ImageNet)
+- **Stage 4**: ~5-7 hours (ImageNet-1k)
 
 ### Accuracy Progression
 - **Stage 1**: 85-95% (ImageNette)
 - **Stage 2**: 60-70% (Tiny ImageNet)
 - **Stage 3**: 45-55% (ImageNet Mini)
-- **Stage 4**: 70-80% (Full ImageNet)
+- **Stage 4**: 70-80% (ImageNet-1k)
 
 ## 🚀 Quick Start
 
@@ -181,7 +181,7 @@ pip install torch torchvision matplotlib tqdm numpy
 # - imagenette2/
 # - tiny-imagenet-200/
 # - imagenet-mini/
-# - imagenet/
+# - imagenet1k/
 ```
 
 ### 3. Run Enhanced Progressive Training (Recommended)
@@ -308,7 +308,7 @@ if val_acc > target_accuracy:
 ### 2. **Hardware Considerations**
 - Use GPU for all stages when possible
 - Adjust batch sizes based on available memory
-- Consider distributed training for full ImageNet
+- Consider distributed training for ImageNet-1k
 
 ### 3. **Monitoring Strategy**
 - Check intermediate results after each stage

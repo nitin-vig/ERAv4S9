@@ -23,7 +23,7 @@ Simply modify the `STAGES_TO_RUN` list in the new cell:
 STAGES_TO_RUN = ["imagenette", "tiny_imagenet"]
 
 # Or run all stages in sequence:
-STAGES_TO_RUN = ["imagenette", "tiny_imagenet", "imagenet_mini", "imagenet"]
+STAGES_TO_RUN = ["imagenette", "tiny_imagenet", "imagenet_mini", "imagenet1k"]
 ```
 
 ### Key Configuration Options
@@ -104,7 +104,7 @@ STAGES_TO_RUN = ["imagenette", "tiny_imagenet"]  # ~10-15 minutes
 
 ### Full Progressive Training
 ```python
-STAGES_TO_RUN = ["imagenette", "tiny_imagenet", "imagenet_mini", "imagenet"]  # Hours
+STAGES_TO_RUN = ["imagenette", "tiny_imagenet", "imagenet_mini", "imagenet1k"]  # Hours
 ```
 
 ## Benefits
@@ -143,7 +143,7 @@ STAGES_TO_RUN = ["imagenette", "imagenet_mini"]  # Skip tiny_imagenet
 # Manually set pretrained_weights_path
 pretrained_weights_path = "./models/weights_for_imagenet_mini.pth"
 # Then run from that stage forward
-STAGES_TO_RUN = ["imagenet_mini", "imagenet"]
+STAGES_TO_RUN = ["imagenet_mini", "imagenet1k"]
 ```
 
 Happy training! 🚀

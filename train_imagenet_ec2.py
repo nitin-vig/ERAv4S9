@@ -375,9 +375,9 @@ def main():
                        help='Directory to save checkpoints')
     parser.add_argument('--data-root', type=str, default='/data/imagenet',
                        help='Root directory for ImageNet data')
-    parser.add_argument('--dataset', type=str, default='imagenet', 
-                       choices=['imagenet', 'tiny_imagenet'],
-                       help='Dataset to train on (imagenet or tiny_imagenet)')
+    parser.add_argument('--dataset', type=str, default='imagenet1k', 
+                       choices=['imagenet1k', 'tiny_imagenet'],
+                       help='Dataset to train on (imagenet1k or tiny_imagenet)')
     parser.add_argument('--distributed', action='store_true',
                        help='Use distributed training (torchrun)')
     parser.add_argument('--batch-size', type=int, default=None,
@@ -426,7 +426,7 @@ def main():
     
     # Verify dataset structure
     if not args.skip_dataset_check and ((not is_distributed) or (is_distributed and rank == 0)):
-        if args.dataset == 'imagenet':
+        if args.dataset == 'imagenet1k':
             is_valid, imagenet_path, message = verify_imagenet_structure(args.data_root)
             logger.info(message)
             if not is_valid:
@@ -474,8 +474,8 @@ def main():
     if args.compute_stats and ((not is_distributed) or (is_distributed and rank == 0)):
         logger.info("📊 Computing dataset mean/std statistics...")
         # Create a temporary dataset without normalization for stats computation
-        if args.dataset == 'imagenet':
-            dataset_path = os.path.join(args.data_root, "imagenet")
+        if args.dataset == 'imagenet1k':
+            dataset_path = os.path.join(args.data_root, "imagenet1k")
         else:  # tiny_imagenet
             dataset_path = args.data_root
             
@@ -487,7 +487,7 @@ def main():
             ToTensorV2(),
         ])
         
-        if args.dataset == 'imagenet':
+        if args.dataset == 'imagenet1k':
             stats_dataset = ImageNetDataset(dataset_path, split='train', transform=train_transform_no_norm)
         else:  # tiny_imagenet
             from dataset_loader import TinyImageNetDataset

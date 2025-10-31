@@ -156,7 +156,7 @@ def get_model(model_name="resnet50", dataset_name="imagenette", num_classes=None
         num_classes = dataset_config["classes"]
         print(f"📊 Creating model for {dataset_name} with {num_classes} classes")
     
-    if dataset_name in ["imagenet", "imagenet_mini"]:
+    if dataset_name in ["imagenet1k", "imagenet_mini"]:
         if model_name == "resnet50":
             return resnet50_imagenet(num_classes=num_classes, pretrained=pretrained)
         else:
@@ -169,7 +169,7 @@ def get_model(model_name="resnet50", dataset_name="imagenette", num_classes=None
             raise ValueError(f"Model {model_name} not supported for {dataset_name}")
     
     else:
-        raise ValueError(f"Unknown dataset: {dataset_name}. Supported datasets: imagenet, imagenet_mini, tiny_imagenet, imagenette")
+        raise ValueError(f"Unknown dataset: {dataset_name}. Supported datasets: imagenet1k, imagenet_mini, tiny_imagenet, imagenette")
 
 def count_parameters(model):
     """Count the number of trainable parameters in the model"""
