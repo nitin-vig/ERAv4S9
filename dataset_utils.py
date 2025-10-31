@@ -89,7 +89,7 @@ def verify_imagenet_structure(data_root):
     Returns:
         tuple: (is_valid, imagenet_path, message)
     """
-    imagenet_path = os.path.join(data_root, "imagenet")
+    imagenet_path = os.path.join(data_root, "imagenet1k")
     train_path = os.path.join(imagenet_path, "train")
     val_path = os.path.join(imagenet_path, "val")
     
