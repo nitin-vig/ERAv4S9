@@ -375,6 +375,9 @@ def main():
                        help='Directory to save checkpoints')
     parser.add_argument('--data-root', type=str, default='/data/imagenet',
                        help='Root directory for ImageNet data')
+    parser.add_argument('--dataset', type=str, default='imagenet', 
+                       choices=['imagenet', 'tiny_imagenet'],
+                       help='Dataset to train on (imagenet or tiny_imagenet)')
     parser.add_argument('--distributed', action='store_true',
                        help='Use distributed training (torchrun)')
     parser.add_argument('--batch-size', type=int, default=None,
@@ -417,17 +420,35 @@ def main():
     if use_cuda:
         cudnn.benchmark = True
     
-    # Update config for ImageNet
-    Config.update_for_dataset('imagenet')
+    # Update config for specified dataset
+    Config.update_for_dataset(args.dataset)
     Config.DATA_ROOT = args.data_root
     
     # Verify dataset structure
     if not args.skip_dataset_check and ((not is_distributed) or (is_distributed and rank == 0)):
-        is_valid, imagenet_path, message = verify_imagenet_structure(args.data_root)
-        logger.info(message)
-        if not is_valid:
-            logger.error("Please download and organize ImageNet dataset before training")
-            return
+        if args.dataset == 'imagenet':
+            is_valid, imagenet_path, message = verify_imagenet_structure(args.data_root)
+            logger.info(message)
+            if not is_valid:
+                logger.error("Please download and organize ImageNet dataset before training")
+                return
+        elif args.dataset == 'tiny_imagenet':
+            # For tiny_imagenet, check if the dataset directory exists
+            tiny_imagenet_path = args.data_root
+            if not os.path.exists(tiny_imagenet_path):
+                logger.error(f"❌ Tiny ImageNet dataset not found at {tiny_imagenet_path}")
+                return
+            
+            # Check for required subdirectories
+            required_dirs = ['train', 'val']
+            missing_dirs = [d for d in required_dirs if not os.path.exists(os.path.join(tiny_imagenet_path, d))]
+            if missing_dirs:
+                logger.error(f"❌ Missing required directories in Tiny ImageNet: {missing_dirs}")
+                logger.error(f"Expected structure: {tiny_imagenet_path}/{{train,val}}/")
+                return
+            
+            logger.info(f"✅ Tiny ImageNet dataset found at {tiny_imagenet_path}")
+            imagenet_path = tiny_imagenet_path
     
     # Override config if provided
     if args.batch_size:
@@ -435,33 +456,42 @@ def main():
     if args.epochs:
         Config.NUM_EPOCHS = args.epochs
     
-    dataset_config = Config.get_dataset_config('imagenet')
+    dataset_config = Config.get_dataset_config(args.dataset)
     
     if (not is_distributed) or (is_distributed and rank == 0):
-        logger.info(f"Dataset: ImageNet")
+        logger.info(f"Dataset: {args.dataset.title()}")
         logger.info(f"Batch size: {Config.BATCH_SIZE}")
         logger.info(f"Epochs: {Config.NUM_EPOCHS}")
         logger.info(f"Learning rate: {dataset_config.get('lr', Config.LEARNING_RATE)}")
     
     # Get data loaders
     if (not is_distributed) or (is_distributed and rank == 0):
-        logger.info(f"📂 Loading ImageNet dataset from: {args.data_root}...")
+        logger.info(f"📂 Loading {args.dataset.title()} dataset from: {args.data_root}...")
     
-    train_loader, test_loader = get_data_loaders('imagenet')
+    train_loader, test_loader = get_data_loaders(args.dataset)
     
     # Compute dataset statistics if requested
     if args.compute_stats and ((not is_distributed) or (is_distributed and rank == 0)):
         logger.info("📊 Computing dataset mean/std statistics...")
         # Create a temporary dataset without normalization for stats computation
-        imagenet_path = os.path.join(args.data_root, "imagenet")
-        dataset_config = Config.get_dataset_config('imagenet')
+        if args.dataset == 'imagenet':
+            dataset_path = os.path.join(args.data_root, "imagenet")
+        else:  # tiny_imagenet
+            dataset_path = args.data_root
+            
+        dataset_config = Config.get_dataset_config(args.dataset)
         
         # Create transforms without normalization
         train_transform_no_norm = A.Compose([
             A.Resize(dataset_config["image_size"], dataset_config["image_size"]),
             ToTensorV2(),
         ])
-        stats_dataset = ImageNetDataset(imagenet_path, split='train', transform=train_transform_no_norm)
+        
+        if args.dataset == 'imagenet':
+            stats_dataset = ImageNetDataset(dataset_path, split='train', transform=train_transform_no_norm)
+        else:  # tiny_imagenet
+            from dataset_loader import TinyImageNetDataset
+            stats_dataset = TinyImageNetDataset(dataset_path, split='train', transform=train_transform_no_norm)
         mean, std = compute_dataset_mean_std(stats_dataset, num_samples=10000, 
                                              batch_size=64, num_workers=args.num_workers)
         
@@ -544,7 +574,8 @@ def main():
     if (not is_distributed) or (is_distributed and rank == 0):
         logger.info("🤖 Creating ResNet50 model...")
     
-    model = get_model(model_name='resnet50', dataset_name='imagenet', num_classes=1000)
+    num_classes = dataset_config.get('classes', 1000)
+    model = get_model(model_name='resnet50', dataset_name=args.dataset, num_classes=num_classes)
     model = model.to(device)
     
     # Load tiny_imagenet weights if not resuming
@@ -572,7 +603,7 @@ def main():
                 base_model,
                 train_loader,
                 device,
-                dataset_name='imagenet',
+                dataset_name=args.dataset,
                 weight_decay=dataset_config.get('weight_decay', 1e-3)
             )
             
