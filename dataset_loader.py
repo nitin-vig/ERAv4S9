@@ -330,14 +330,17 @@ def get_data_loaders(dataset_name, data_root=None, batch_size=None, num_workers=
     val_transform = get_albumentations_transforms(dataset_name, split='val')
     
     # Create datasets based on dataset name
-    if dataset_name == 'imagenet1k' or dataset_name == 'imagenet_mini':
+    if dataset_name == 'imagenet' or dataset_name == 'imagenet1k' or dataset_name == 'imagenet_mini':
         # ImageNet-1k dataset
-        imagenet_path = os.path.join(data_root, "imagenet1k")
+        imagenet_path = os.path.join(data_root, "imagenet", "full_dataset")
         if not os.path.exists(imagenet_path):
             raise ValueError(f"ImageNet dataset not found at {imagenet_path}. Please download it first.")
         
         train_dataset = ImageNetDataset(imagenet_path, split='train', transform=train_transform)
-        val_dataset = ImageNetDataset(imagenet_path, split='val', transform=val_transform)
+        
+        # Check if validation directory exists, otherwise use val
+        val_split = 'validation' if os.path.exists(os.path.join(imagenet_path, 'validation')) else 'val'
+        val_dataset = ImageNetDataset(imagenet_path, split=val_split, transform=val_transform)
     
     elif dataset_name == 'tiny_imagenet':
         # Tiny ImageNet dataset

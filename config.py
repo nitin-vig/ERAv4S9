@@ -68,6 +68,21 @@ class ProgressiveConfig:
             "enabled": True,
             "priority": 3
         },
+        "imagenet": {
+            "dataset": "imagenet",
+            "classes": 1000,
+            "image_size": 224,
+            "epochs": 100,
+            "batch_size": 256,
+            "lr": 0.08,
+            "optimizer": "sgd",
+            "scheduler": "one_cycle",
+            "weight_decay": 1e-3,
+            "label_smoothing": 0.1,
+            "description": "Final full-scale training - conservative LR for stable training",
+            "enabled": True,
+            "priority": 4
+        },
         "imagenet1k": {
             "dataset": "imagenet1k",
             "classes": 1000,
