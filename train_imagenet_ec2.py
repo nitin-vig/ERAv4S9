@@ -475,7 +475,7 @@ def main():
         logger.info("📊 Computing dataset mean/std statistics...")
         # Create a temporary dataset without normalization for stats computation
         if args.dataset == 'imagenet' or args.dataset == 'imagenet1k':
-            dataset_path = os.path.join(args.data_root, "imagenet", "full_dataset")
+            dataset_path = os.path.join(args.data_root, "full_dataset")
         else:  # tiny_imagenet
             dataset_path = args.data_root
             

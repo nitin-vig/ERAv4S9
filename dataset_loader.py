@@ -332,7 +332,7 @@ def get_data_loaders(dataset_name, data_root=None, batch_size=None, num_workers=
     # Create datasets based on dataset name
     if dataset_name == 'imagenet' or dataset_name == 'imagenet1k' or dataset_name == 'imagenet_mini':
         # ImageNet-1k dataset
-        imagenet_path = os.path.join(data_root, "imagenet", "full_dataset")
+        imagenet_path = os.path.join(data_root, "full_dataset")
         if not os.path.exists(imagenet_path):
             raise ValueError(f"ImageNet dataset not found at {imagenet_path}. Please download it first.")
         

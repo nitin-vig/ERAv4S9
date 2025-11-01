@@ -89,7 +89,7 @@ def verify_imagenet_structure(data_root):
     Returns:
         tuple: (is_valid, imagenet_path, message)
     """
-    imagenet_path = os.path.join(data_root, "imagenet", "full_dataset")
+    imagenet_path = os.path.join(data_root, "full_dataset")
     train_path = os.path.join(imagenet_path, "train")
     
     # Check for both val and validation directories
