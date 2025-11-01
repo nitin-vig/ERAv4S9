@@ -89,9 +89,19 @@ def verify_imagenet_structure(data_root):
     Returns:
         tuple: (is_valid, imagenet_path, message)
     """
-    imagenet_path = os.path.join(data_root, "imagenet1k")
+    imagenet_path = os.path.join(data_root, "imagenet", "full_dataset")
     train_path = os.path.join(imagenet_path, "train")
+    
+    # Check for both val and validation directories
     val_path = os.path.join(imagenet_path, "val")
+    validation_path = os.path.join(imagenet_path, "validation")
+    
+    # Use whichever validation directory exists
+    if os.path.exists(validation_path):
+        val_path = validation_path
+        val_dir_name = "validation"
+    else:
+        val_dir_name = "val"
     
     # Check if paths exist
     if not os.path.exists(imagenet_path):
@@ -115,7 +125,7 @@ def verify_imagenet_structure(data_root):
             f"  │   ├── n01440764/\n"
             f"  │   ├── n01443537/\n"
             f"  │   └── ... (1000 class folders)\n"
-            f"  └── val/\n"
+            f"  └── validation/ (or val/)\n"
             f"      ├── n01440764/\n"
             f"      ├── n01443537/\n"
             f"      └── ... (1000 class folders)"
@@ -128,7 +138,7 @@ def verify_imagenet_structure(data_root):
         return False, imagenet_path, message
     
     if not os.path.exists(val_path):
-        message = f"❌ Validation directory not found: {val_path}"
+        message = f"❌ Validation directory not found: {val_path} or {validation_path}"
         return False, imagenet_path, message
     
     # Check for class folders
@@ -157,7 +167,7 @@ def verify_imagenet_structure(data_root):
     message = (
         f"✅ ImageNet dataset found at {imagenet_path}\n"
         f"   Train classes: {len(train_classes)}\n"
-        f"   Validation classes: {len(val_classes)}\n"
+        f"   Validation classes: {len(val_classes)} (using {val_dir_name}/ directory)\n"
         f"   Expected: 1000 classes each"
     )
     
