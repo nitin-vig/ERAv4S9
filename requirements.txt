@@ -18,6 +18,10 @@ albumentations>=1.3.0
 # HTTP requests for dataset downloads
 requests>=2.25.0
 
+# Hugging Face datasets for ImageNet download
+datasets>=2.14.0
+huggingface-hub>=0.16.0
+
 # Learning rate finder
 torch-lr-finder>=0.2.2
 
