@@ -11,6 +11,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 from config import Config
+from models import get_id_to_class_mapping
 
 class MetricsTracker:
     """Class to track training metrics"""
@@ -304,6 +305,11 @@ def train_model(model, train_loader, test_loader, device, config=None, dataset_n
     
     criterion = get_criterion(criterion_name="cross_entropy", label_smoothing=0.1)
     
+    # Extract id-to-class mapping from dataset (required)
+    id_to_class = get_id_to_class_mapping(train_loader)
+    if id_to_class is None:
+        raise ValueError(f"Could not extract class mapping from dataset. Dataset must have 'classes' or 'class_to_idx' attribute.")
+    
     # Training loop
     best_test_loss = float('inf')
     
@@ -330,7 +336,12 @@ def train_model(model, train_loader, test_loader, device, config=None, dataset_n
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             save_path = f"{config.SAVE_MODEL_PATH}/best_model_{config.DATASET_NAME}.pth"
-            torch.save(model.state_dict(), save_path)
+            # Save with class mapping (required)
+            checkpoint = {
+                'model_state_dict': model.state_dict(),
+                'id_to_class': id_to_class
+            }
+            torch.save(checkpoint, save_path)
             print(f"New best model saved with test loss: {test_loss:.4f}")
         
         print(f"Current learning rate: {current_lr:.6f}")
@@ -433,6 +444,11 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
     
     criterion = get_criterion(criterion_name="cross_entropy", label_smoothing=0.1)
     
+    # Extract id-to-class mapping from dataset (required)
+    id_to_class = get_id_to_class_mapping(train_loader)
+    if id_to_class is None:
+        raise ValueError(f"Could not extract class mapping from dataset. Dataset must have 'classes' or 'class_to_idx' attribute.")
+    
     # Training loop
     best_test_loss = float('inf')
     
@@ -459,7 +475,12 @@ def train_model_with_transfer(model, train_loader, test_loader, device, config=N
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             save_path = f"{config.SAVE_MODEL_PATH}/best_model_{config.DATASET_NAME}.pth"
-            torch.save(model.state_dict(), save_path)
+            # Save with class mapping (required)
+            checkpoint = {
+                'model_state_dict': model.state_dict(),
+                'id_to_class': id_to_class
+            }
+            torch.save(checkpoint, save_path)
             print(f"New best model saved with test loss: {test_loss:.4f}")
         
         print(f"Current learning rate: {current_lr:.6f}")

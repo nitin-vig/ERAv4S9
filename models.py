@@ -184,8 +184,40 @@ def get_model_summary(model, input_size=(3, 224, 224)):
         print("torchsummary not available. Install with: pip install torchsummary")
         return None
 
-def save_model(model, path, epoch=None, optimizer=None, scheduler=None, loss=None):
-    """Save model checkpoint"""
+def get_id_to_class_mapping(dataset_or_loader):
+    """
+    Extract id-to-class mapping from a dataset or DataLoader.
+    
+    Args:
+        dataset_or_loader: Either a Dataset instance or DataLoader instance
+        
+    Returns:
+        dict: Mapping from class_id (int) to class_name (str), or None if not available
+    """
+    # Get dataset from loader if needed
+    dataset = dataset_or_loader
+    if hasattr(dataset_or_loader, 'dataset'):
+        dataset = dataset_or_loader.dataset
+    
+    if dataset is None:
+        return None
+    
+    # Try to get class mapping
+    id_to_class = None
+    
+    # Method 1: Check for class_to_idx (common in torchvision ImageFolder)
+    if hasattr(dataset, 'class_to_idx') and isinstance(dataset.class_to_idx, dict):
+        # Reverse the mapping: idx -> class_name
+        id_to_class = {idx: class_name for class_name, idx in dataset.class_to_idx.items()}
+    
+    # Method 2: Check for classes attribute (list of class names)
+    elif hasattr(dataset, 'classes') and isinstance(dataset.classes, (list, tuple)):
+        id_to_class = {idx: str(class_name) for idx, class_name in enumerate(dataset.classes)}
+    
+    return id_to_class
+
+def save_model(model, path, epoch=None, optimizer=None, scheduler=None, loss=None, id_to_class=None):
+    """Save model checkpoint with required id-to-class mapping"""
     checkpoint = {
         'model_state_dict': model.state_dict(),
         'epoch': epoch,
@@ -197,6 +229,13 @@ def save_model(model, path, epoch=None, optimizer=None, scheduler=None, loss=Non
     
     if scheduler is not None:
         checkpoint['scheduler_state_dict'] = scheduler.state_dict()
+    
+    # id_to_class mapping is required
+    if id_to_class is None:
+        raise ValueError("id_to_class mapping is required when saving model. Provide dataset/loader or mapping explicitly.")
+    
+    checkpoint['id_to_class'] = id_to_class
+    print(f"✅ Class mapping included in checkpoint ({len(id_to_class)} classes)")
     
     torch.save(checkpoint, path)
     print(f"Model saved to {path}")

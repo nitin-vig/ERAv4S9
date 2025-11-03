@@ -40,7 +40,7 @@ import torch.backends.cudnn as cudnn
 # Import project modules
 from config import Config
 from dataset_loader import get_data_loaders, ImageNetDataset, get_albumentations_transforms
-from models import get_model, save_model, load_model
+from models import get_model, save_model, load_model, get_id_to_class_mapping
 from training_utils import topk_accuracy, get_optimizer, get_scheduler, get_criterion
 from dataset_utils import verify_imagenet_structure, compute_dataset_mean_std
 from lr_finder import find_optimal_lr
@@ -280,8 +280,8 @@ def validate(model, test_loader, criterion, logger, device, is_distributed):
 
 
 def save_checkpoint(model, optimizer, scheduler, epoch, loss, accuracy, checkpoint_dir, 
-                   is_distributed, logger, is_best=False):
-    """Save training checkpoint"""
+                   is_distributed, logger, is_best=False, id_to_class=None):
+    """Save training checkpoint with required id-to-class mapping"""
     checkpoint_dir = Path(checkpoint_dir)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
@@ -302,6 +302,13 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, accuracy, checkpoi
     
     if scheduler is not None:
         checkpoint['scheduler_state_dict'] = scheduler.state_dict()
+    
+    # id_to_class mapping is required
+    if id_to_class is None:
+        raise ValueError("id_to_class mapping is required when saving checkpoint. Provide dataset/loader or mapping explicitly.")
+    
+    checkpoint['id_to_class'] = id_to_class
+    logger.info(f"✅ Class mapping included in checkpoint ({len(id_to_class)} classes)")
     
     # Save latest checkpoint
     latest_path = checkpoint_dir / 'checkpoint_latest.pth'
@@ -469,6 +476,18 @@ def main():
         logger.info(f"📂 Loading {args.dataset.title()} dataset from: {args.data_root}...")
     
     train_loader, test_loader = get_data_loaders(args.dataset)
+    
+    # Extract id-to-class mapping from dataset (required)
+    id_to_class = None
+    if (not is_distributed) or (is_distributed and rank == 0):
+        id_to_class = get_id_to_class_mapping(train_loader)
+        if id_to_class is None:
+            raise ValueError("Could not extract class mapping from dataset. Dataset must have 'classes' or 'class_to_idx' attribute.")
+        logger.info(f"✅ Extracted class mapping: {len(id_to_class)} classes")
+    else:
+        # For non-rank-0 processes, we still need id_to_class for save_checkpoint
+        # but it won't be used. Set to empty dict to avoid None error.
+        id_to_class = {}
     
     # Compute dataset statistics if requested
     if args.compute_stats and ((not is_distributed) or (is_distributed and rank == 0)):
@@ -720,7 +739,8 @@ def main():
         if (not is_distributed) or (is_distributed and rank == 0):
             save_checkpoint(
                 model, optimizer, scheduler, epoch, test_loss, test_acc,
-                args.checkpoint_dir, is_distributed, logger, is_best=is_best
+                args.checkpoint_dir, is_distributed, logger, is_best=is_best,
+                id_to_class=id_to_class
             )
         
         # Log epoch summary
