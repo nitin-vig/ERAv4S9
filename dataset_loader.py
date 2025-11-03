@@ -402,7 +402,7 @@ def get_data_loaders(dataset_name, data_root=None, batch_size=None, num_workers=
         pin_memory=Config.DATA_LOADING.get('pin_memory', True),
         persistent_workers=Config.DATA_LOADING.get('persistent_workers', False) if num_workers > 0 else False,
         prefetch_factor=Config.DATA_LOADING.get('prefetch_factor', 8) if num_workers > 0 else None,
-        drop_last=False
+        drop_last=True
     )
     
     val_loader = DataLoader(
