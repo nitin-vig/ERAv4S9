@@ -12,3 +12,4 @@ checkpoints/checkpoints/checkpoint_epoch_90.pth
 checkpoints/checkpoints/checkpoint_latest.pth
 checkpoints/checkpoints/checkpoint_best.pth
 checkpoints/checkpoints/checkpoint_latest.pth
+hf_app/checkpoint_best.pth
