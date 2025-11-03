@@ -11,6 +11,7 @@ from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from config import Config, ProgressiveConfig
+import matplotlib.pyplot as plt
 
 
 class ImageNetDataset(Dataset):
@@ -426,4 +427,81 @@ def get_data_loaders(dataset_name, data_root=None, batch_size=None, num_workers=
     print(f"   Number of classes: {dataset_config.get('classes', 'unknown')}")
     
     return train_loader, val_loader
+
+
+def visualize_samples(
+    data_loader,
+    num_samples=8,
+    cols=4,
+    mean=None,
+    std=None,
+    figsize=(12, 8),
+    class_map=None,
+):
+    """
+    Visualize a grid of samples from a DataLoader, showing label ids and names.
+
+    Args:
+        data_loader: PyTorch DataLoader yielding (images, labels)
+        num_samples: Total number of images to display
+        cols: Number of columns in the grid
+        mean: Per-channel mean used for normalization (defaults to ImageNet)
+        std: Per-channel std used for normalization (defaults to ImageNet)
+        figsize: Matplotlib figure size
+        class_map: Optional mapping for label → name. Can be dict[int,str] or
+                   list/tuple indexed by label id. If None, will try to infer
+                   from dataset (prefers `class_to_idx`, falls back to `classes`).
+    """
+    if num_samples <= 0:
+        return
+    if mean is None:
+        mean = [0.485, 0.456, 0.406]
+    if std is None:
+        std = [0.229, 0.224, 0.225]
+
+    images, labels = next(iter(data_loader))
+    images = images[:num_samples]
+    labels = labels[:num_samples]
+
+    rows = int(np.ceil(num_samples / cols))
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = np.array(axes).reshape(rows, cols)
+
+    mean_tensor = torch.tensor(mean).view(3, 1, 1)
+    std_tensor = torch.tensor(std).view(3, 1, 1)
+
+    # Build index → class name map
+    idx_to_name = None
+    if class_map is not None:
+        if isinstance(class_map, dict):
+            idx_to_name = class_map
+        elif isinstance(class_map, (list, tuple)):
+            idx_to_name = {i: name for i, name in enumerate(class_map)}
+    else:
+        dataset = getattr(data_loader, 'dataset', None)
+        if dataset is not None and hasattr(dataset, 'class_to_idx') and isinstance(dataset.class_to_idx, dict):
+            idx_to_name = {v: k for k, v in dataset.class_to_idx.items()}
+        elif dataset is not None and hasattr(dataset, 'classes') and isinstance(dataset.classes, (list, tuple)):
+            idx_to_name = {i: name for i, name in enumerate(dataset.classes)}
+
+    idx = 0
+    for r in range(rows):
+        for c in range(cols):
+            ax = axes[r, c]
+            if idx < len(images):
+                img = images[idx].detach().cpu()
+                img = img * std_tensor + mean_tensor
+                img = torch.clamp(img, 0.0, 1.0)
+                img_np = img.permute(1, 2, 0).numpy()
+                ax.imshow(img_np)
+                label_id = int(labels[idx])
+                if idx_to_name is not None and label_id in idx_to_name:
+                    ax.set_title(f"{idx_to_name[label_id]} ({label_id})")
+                else:
+                    ax.set_title(f"label: {label_id}")
+            ax.axis('off')
+            idx += 1
+
+    plt.tight_layout()
+    plt.show()
 
