@@ -4,14 +4,45 @@ Provides data loading utilities for ImageNet-1k, Tiny ImageNet, and other datase
 """
 
 import os
+import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from pathlib import Path
 from config import Config, ProgressiveConfig
 import matplotlib.pyplot as plt
+
+
+def load_imagenet_standard_order():
+    """
+    Load standard ImageNet class ordering from imagenet_class_index.json.
+    Returns the ordered list of WNID class names (e.g., ['n01440764', 'n01443537', ...])
+    """
+    # Try multiple possible locations for the JSON file
+    possible_paths = [
+        Path(__file__).parent.parent / "hf_app" / "imagenet_class_index.json",
+        Path(__file__).parent / "hf_app" / "imagenet_class_index.json",
+        Path("hf_app") / "imagenet_class_index.json",
+        Path("imagenet_class_index.json"),
+    ]
+    
+    for path in possible_paths:
+        if path.exists():
+            try:
+                with open(path, 'r') as f:
+                    class_index = json.load(f)
+                # Extract WNIDs in standard order: [idx_map["0"][0], idx_map["1"][0], ...]
+                standard_order = [class_index[str(i)][0] for i in range(len(class_index))]
+                print(f"✅ Loaded standard ImageNet ordering from {path} ({len(standard_order)} classes)")
+                return standard_order
+            except Exception as e:
+                print(f"⚠️  Error loading {path}: {e}")
+    
+    print("⚠️  imagenet_class_index.json not found, falling back to alphabetical sorting")
+    return None
 
 
 class ImageNetDataset(Dataset):
@@ -48,23 +79,25 @@ class ImageNetDataset(Dataset):
         if not os.path.exists(split_dir):
             raise ValueError(f"Split directory not found: {split_dir}")
         
-        # Get all class folders
-        # ⚠️ SORTING BUG: Using alphabetical sorting (sorted(os.listdir()))
-        # This creates an alphabetical WNID order that may NOT match the standard
-        # PyTorch ImageNet order (from imagenet_class_index.json).
-        # 
-        # Standard ImageNet order: index 0 = n01440764, index 1 = n01443537, etc.
-        # Alphabetical order: sorted(['n01440764', 'n01443537', ...]) may differ
-        #
-        # If your model was trained with standard ImageNet order but the dataset uses
-        # alphabetical order, class indices will be misaligned and predictions will be wrong.
-        #
-        # To fix: Use standard ImageNet ordering instead of alphabetical:
-        #   1. Load imagenet_class_index.json
-        #   2. Use order: [idx_map[str(i)][0] for i in range(1000)]
-        #   3. Or ensure model training uses the same alphabetical order
-        self.classes = sorted([d for d in os.listdir(split_dir) 
-                              if os.path.isdir(os.path.join(split_dir, d))])
+        # Get all class folders found in the directory
+        available_classes = [d for d in os.listdir(split_dir) 
+                            if os.path.isdir(os.path.join(split_dir, d))]
+        
+        # Use standard ImageNet ordering if available, otherwise fall back to alphabetical
+        standard_order = load_imagenet_standard_order()
+        if standard_order is not None:
+            # Filter standard_order to only include classes that exist in the dataset
+            # and maintain the standard order
+            self.classes = [cls for cls in standard_order if cls in available_classes]
+            # Add any extra classes that might be in the dataset but not in standard order
+            extra_classes = set(available_classes) - set(self.classes)
+            if extra_classes:
+                print(f"⚠️  Found {len(extra_classes)} classes not in standard order, appending alphabetically")
+                self.classes.extend(sorted(extra_classes))
+        else:
+            # Fallback to alphabetical sorting
+            self.classes = sorted(available_classes)
+            print(f"⚠️  Using alphabetical sorting (standard order not available)")
         
         # Build list of (image_path, class_idx) tuples
         self.samples = []
@@ -138,10 +171,32 @@ class TinyImageNetDataset(Dataset):
         if split == 'train':
             split_dir = os.path.join(root, 'train')
             self.samples = []
-            # ⚠️ SORTING BUG: Same alphabetical sorting issue as ImageNetDataset
-            # See comment above for details
-            self.classes = sorted([d for d in os.listdir(split_dir) 
-                                  if os.path.isdir(os.path.join(split_dir, d))])
+            
+            # Get all class folders found in the directory
+            available_classes = [d for d in os.listdir(split_dir) 
+                              if os.path.isdir(os.path.join(split_dir, d))]
+            
+            # For Tiny ImageNet, try to use wnids.txt if available for standard ordering
+            wnids_file = os.path.join(root, 'wnids.txt')
+            if os.path.exists(wnids_file):
+                try:
+                    with open(wnids_file, 'r') as f:
+                        standard_order = [line.strip() for line in f if line.strip()]
+                    # Filter to only include classes that exist in the dataset
+                    self.classes = [cls for cls in standard_order if cls in available_classes]
+                    # Add any extra classes
+                    extra_classes = set(available_classes) - set(self.classes)
+                    if extra_classes:
+                        print(f"⚠️  Found {len(extra_classes)} classes not in wnids.txt, appending alphabetically")
+                        self.classes.extend(sorted(extra_classes))
+                    print(f"✅ Using Tiny ImageNet ordering from wnids.txt")
+                except Exception as e:
+                    print(f"⚠️  Error reading wnids.txt: {e}, falling back to alphabetical")
+                    self.classes = sorted(available_classes)
+            else:
+                # Fallback to alphabetical sorting if wnids.txt not available
+                self.classes = sorted(available_classes)
+                print(f"⚠️  wnids.txt not found, using alphabetical sorting")
             
             for class_idx, class_name in enumerate(self.classes):
                 class_dir = os.path.join(split_dir, class_name, 'images')
@@ -173,14 +228,43 @@ class TinyImageNetDataset(Dataset):
             
             # Get all unique classes
             if not self.class_to_idx:
-                # Fallback: use train classes
-                # ⚠️ SORTING BUG: Same alphabetical sorting issue
+                # Fallback: use train classes with standard ordering if available
                 train_dir = os.path.join(root, 'train')
-                self.classes = sorted([d for d in os.listdir(train_dir) 
-                                      if os.path.isdir(os.path.join(train_dir, d))])
+                available_classes = [d for d in os.listdir(train_dir) 
+                                  if os.path.isdir(os.path.join(train_dir, d))]
+                
+                # Try to use wnids.txt for standard ordering
+                wnids_file = os.path.join(root, 'wnids.txt')
+                if os.path.exists(wnids_file):
+                    try:
+                        with open(wnids_file, 'r') as f:
+                            standard_order = [line.strip() for line in f if line.strip()]
+                        self.classes = [cls for cls in standard_order if cls in available_classes]
+                        extra_classes = set(available_classes) - set(self.classes)
+                        if extra_classes:
+                            self.classes.extend(sorted(extra_classes))
+                    except Exception:
+                        self.classes = sorted(available_classes)
+                else:
+                    self.classes = sorted(available_classes)
+                
                 self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
             else:
-                self.classes = sorted(self.class_to_idx.keys())
+                # Use wnids.txt ordering if available, otherwise alphabetical
+                wnids_file = os.path.join(root, 'wnids.txt')
+                if os.path.exists(wnids_file):
+                    try:
+                        with open(wnids_file, 'r') as f:
+                            standard_order = [line.strip() for line in f if line.strip()]
+                        # Filter to only include classes in class_to_idx
+                        self.classes = [cls for cls in standard_order if cls in self.class_to_idx]
+                        extra_classes = set(self.class_to_idx.keys()) - set(self.classes)
+                        if extra_classes:
+                            self.classes.extend(sorted(extra_classes))
+                    except Exception:
+                        self.classes = sorted(self.class_to_idx.keys())
+                else:
+                    self.classes = sorted(self.class_to_idx.keys())
             
             # Build samples list
             self.samples = []
