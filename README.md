@@ -348,3 +348,59 @@ Contributions are welcome! Areas for improvement:
 ## 📄 License
 
 This project is open source and available under the MIT License.
+
+
+## Training Logs & Checkpoints Analysis
+
+This section summarizes recent ImageNet training runs, documents the log structure, and provides practical recommendations based on the checkpoint data in `checkpoints/`.
+
+### Summary of Findings
+- Environment: `cuda:0` (A100, 1 GPU).
+- Dataset: ImageNet-1k with `1,159,338` train samples and `50,000` val samples.
+- Training cadence: ~13m55s per epoch (validation adds ~30–35s per epoch).
+- Accuracy progression (latest run `training_20251102_014029.log`):
+  - Epoch 1 → Val Top-1 `26.98%`, Top-5 `54.62%`
+  - Epoch 100 → Val Top-1 `74.15%`, Top-5 `91.73%`
+- Learning rate finder:
+  - Successful runs suggested `max_lr` around `0.053266` for BatchSize `256` (saved in `checkpoints/optimal_lr.txt`) and `0.057286`. 
+  - Adjusted the LR to `0.16` for BatchSize `768` as LR finder wasn't working for `768`, so we manually extrapolated.
+- Normalization stats:
+  - `checkpoints/dataset_stats.json` contains per-channel mean/std, e.g.:
+    - Mean `[0.4798, 0.4549, 0.4050]`, Std `[0.2292, 0.2257, 0.22617]` (values vary slightly across sampling runs).
+
+### Checkpoint Artifacts
+- Latest after every epoch: `checkpoints/checkpoint_latest.pth`
+- Best on validation improvement: `checkpoints/checkpoint_best.pth`
+- Periodic: `checkpoints/checkpoint_epoch_{10,20,30,...,100}.pth`
+- LR Finder output: `checkpoints/optimal_lr.txt` (single line with the recommended `max_lr`)
+- Dataset stats: `checkpoints/dataset_stats.json` with keys `mean` and `std` arrays
+
+### Log Structure
+- Files: `training_YYYYMMDD_HHMMSS.log`
+- Header:
+  - Device/GPU count, epochs, configured LR, train/val sample counts, pretrained source (if any)
+- LR Finder:
+  - Start event, success with `max_lr` (also written to `optimal_lr.txt`)
+  - On failure: CUDA OOM trace and continuation with default LR
+- Per-epoch events:
+  - `Train Epoch N: Loss, Top-1%, Top-5%`
+  - `Validation: Loss, Top-1%, Top-5%`
+  - `Epoch N Summary`: Train/Val metrics and current `Best` snapshot status
+  - Checkpoints: best, latest, and periodic are explicitly logged
+- Common errors:
+  - Dataset not organized (missing class folders) halts training with actionable messages
+
+### How to Read Logs Quickly
+- Search for `Train Epoch` and `Validation` lines to compare metrics per epoch.
+- Look for `Saved best model checkpoint` and `Saved periodic checkpoint` to track progress and recovery points.
+- Check LR Finder block near the start to confirm the suggested LR or reasons for failure.
+
+## Appendix: Dataset Stats Format
+`checkpoints/dataset_stats.json`:
+```json
+{
+  "mean": [R, G, B],
+  "std": [R, G, B]
+}
+```
+Values are computed from a sample of the training set; slight run-to-run variation is expected.
