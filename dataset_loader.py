@@ -49,6 +49,20 @@ class ImageNetDataset(Dataset):
             raise ValueError(f"Split directory not found: {split_dir}")
         
         # Get all class folders
+        # ⚠️ SORTING BUG: Using alphabetical sorting (sorted(os.listdir()))
+        # This creates an alphabetical WNID order that may NOT match the standard
+        # PyTorch ImageNet order (from imagenet_class_index.json).
+        # 
+        # Standard ImageNet order: index 0 = n01440764, index 1 = n01443537, etc.
+        # Alphabetical order: sorted(['n01440764', 'n01443537', ...]) may differ
+        #
+        # If your model was trained with standard ImageNet order but the dataset uses
+        # alphabetical order, class indices will be misaligned and predictions will be wrong.
+        #
+        # To fix: Use standard ImageNet ordering instead of alphabetical:
+        #   1. Load imagenet_class_index.json
+        #   2. Use order: [idx_map[str(i)][0] for i in range(1000)]
+        #   3. Or ensure model training uses the same alphabetical order
         self.classes = sorted([d for d in os.listdir(split_dir) 
                               if os.path.isdir(os.path.join(split_dir, d))])
         
@@ -124,6 +138,8 @@ class TinyImageNetDataset(Dataset):
         if split == 'train':
             split_dir = os.path.join(root, 'train')
             self.samples = []
+            # ⚠️ SORTING BUG: Same alphabetical sorting issue as ImageNetDataset
+            # See comment above for details
             self.classes = sorted([d for d in os.listdir(split_dir) 
                                   if os.path.isdir(os.path.join(split_dir, d))])
             
@@ -158,6 +174,7 @@ class TinyImageNetDataset(Dataset):
             # Get all unique classes
             if not self.class_to_idx:
                 # Fallback: use train classes
+                # ⚠️ SORTING BUG: Same alphabetical sorting issue
                 train_dir = os.path.join(root, 'train')
                 self.classes = sorted([d for d in os.listdir(train_dir) 
                                       if os.path.isdir(os.path.join(train_dir, d))])
