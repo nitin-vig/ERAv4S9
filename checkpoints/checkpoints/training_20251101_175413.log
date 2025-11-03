@@ -1,0 +1,8 @@
+2025-11-01 17:54:13,527 - INFO - ================================================================================
+2025-11-01 17:54:13,527 - INFO - ImageNet Training on EC2 - Multi-GPU Setup
+2025-11-01 17:54:13,527 - INFO - ================================================================================
+2025-11-01 17:54:13,527 - INFO - Device: cuda:0
+2025-11-01 17:54:13,527 - INFO - Distributed: False, Rank: 0, World Size: 1
+2025-11-01 17:54:13,545 - INFO - CUDA Available: True, GPU Count: 1
+2025-11-01 17:54:13,636 - INFO - ❌ No class folders found in /lambda/nfs/ERAv4S09/imagenet/full_dataset/train
+2025-11-01 17:54:13,636 - ERROR - Please download and organize ImageNet dataset before training

@@ -1,0 +1,32 @@
+2025-11-01 17:39:03,980 - INFO - ================================================================================
+2025-11-01 17:39:03,980 - INFO - ImageNet Training on EC2 - Multi-GPU Setup
+2025-11-01 17:39:03,980 - INFO - ================================================================================
+2025-11-01 17:39:03,980 - INFO - Device: cuda:0
+2025-11-01 17:39:03,981 - INFO - Distributed: False, Rank: 0, World Size: 1
+2025-11-01 17:39:03,999 - INFO - CUDA Available: True, GPU Count: 1
+2025-11-01 17:39:04,001 - INFO - ❌ ImageNet dataset not found at /lambda/nfs/ERAv4S09/imagenet/imagenet1k
+
+📥 To download ImageNet:
+1. Register at https://image-net.org/
+2. Download:
+   - ILSVRC2012_img_train.tar (~138 GB)
+   - ILSVRC2012_img_val.tar (~6.3 GB)
+3. Extract:
+   mkdir -p /lambda/nfs/ERAv4S09/imagenet/imagenet1k
+   cd /lambda/nfs/ERAv4S09/imagenet/imagenet1k
+   tar -xf ILSVRC2012_img_train.tar
+   tar -xf ILSVRC2012_img_val.tar
+4. Organize validation set into class folders:
+   # See organize_imagenet_val.py or use provided script
+
+Expected structure:
+  /lambda/nfs/ERAv4S09/imagenet/imagenet1k/
+  ├── train/
+  │   ├── n01440764/
+  │   ├── n01443537/
+  │   └── ... (1000 class folders)
+  └── val/
+      ├── n01440764/
+      ├── n01443537/
+      └── ... (1000 class folders)
+2025-11-01 17:39:04,001 - ERROR - Please download and organize ImageNet dataset before training

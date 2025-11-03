@@ -1,0 +1,49 @@
+2025-11-02 00:56:59,644 - INFO - ================================================================================
+2025-11-02 00:56:59,644 - INFO - ImageNet Training on EC2 - Multi-GPU Setup
+2025-11-02 00:56:59,645 - INFO - ================================================================================
+2025-11-02 00:56:59,645 - INFO - Device: cuda:0
+2025-11-02 00:56:59,645 - INFO - Distributed: False, Rank: 0, World Size: 1
+2025-11-02 00:56:59,664 - INFO - CUDA Available: True, GPU Count: 1
+2025-11-02 00:57:00,459 - INFO - ✅ ImageNet dataset found at //lambda/nfs/ERAv4S09/ERAv4S9/data/imagenet1k
+   Train classes: 1000
+   Validation classes: 1000
+   Expected: 1000 classes each
+2025-11-02 00:57:00,459 - INFO - Dataset: Imagenet1K
+2025-11-02 00:57:00,459 - INFO - Batch size: 256
+2025-11-02 00:57:00,459 - INFO - Epochs: 100
+2025-11-02 00:57:00,459 - INFO - Learning rate: 0.08
+2025-11-02 00:57:00,459 - INFO - 📂 Loading Imagenet1K dataset from: //lambda/nfs/ERAv4S09/ERAv4S9/data...
+2025-11-02 00:57:45,904 - INFO - 📊 Computing dataset mean/std statistics...
+2025-11-02 00:58:30,781 - INFO - 
+💡 Suggested normalization values:
+2025-11-02 00:58:30,781 - INFO -    mean = [0.4818071722984314, 0.45760273933410645, 0.40824824571609497]
+2025-11-02 00:58:30,781 - INFO -    std = [0.2286199927330017, 0.22484780848026276, 0.22569958865642548]
+2025-11-02 00:58:30,782 - INFO - 
+   Update config.py AUGMENTATION section with these values
+2025-11-02 00:58:30,787 - INFO -    Saved to: ./checkpoints/dataset_stats.json
+2025-11-02 00:58:30,788 - INFO - Training samples: 1159338
+2025-11-02 00:58:30,788 - INFO - Validation samples: 50000
+2025-11-02 00:58:30,788 - INFO - Batches per epoch: 4529
+2025-11-02 00:58:30,788 - INFO - 🤖 Creating ResNet50 model...
+2025-11-02 00:58:31,129 - INFO - 📦 Loading tiny_imagenet weights from: ./tiny_imagenet_stage_2/final_model.pth
+2025-11-02 00:58:31,943 - INFO -    Current model (ImageNet): 1000 classes
+2025-11-02 00:58:31,943 - INFO -    Pretrained model (Tiny ImageNet): 200 classes
+2025-11-02 00:58:31,943 - INFO -    ⚠️  Final layer size mismatch! Filtering out fc layer
+2025-11-02 00:58:31,952 - INFO -    ⚠️  Missing keys (expected for FC layer): 2
+2025-11-02 00:58:31,952 - INFO - ✅ Successfully loaded tiny_imagenet weights
+2025-11-02 00:58:31,953 - INFO - 🔍 Running Learning Rate Finder...
+2025-11-02 00:59:39,646 - INFO - ✅ LR Finder suggests max_lr = 0.057286
+2025-11-02 00:59:39,647 - INFO - 💡 Update your training command with: --lr 0.057286
+2025-11-02 00:59:39,654 - INFO -    Saved to: ./checkpoints/optimal_lr.txt
+2025-11-02 00:59:39,655 - INFO -    Using suggested LR: 0.057286 for training
+2025-11-02 00:59:39,656 - INFO - 🚀 Starting training...
+2025-11-02 00:59:39,656 - INFO -    Start epoch: 0, Total epochs: 100
+2025-11-02 01:15:00,336 - INFO - Train Epoch 1: Loss=4.9524, Top-1 Acc=15.55%, Top-5 Acc=35.59%
+2025-11-02 01:15:41,247 - INFO - Validation: Loss=4.0367, Top-1 Acc=26.48%, Top-5 Acc=53.57%
+2025-11-02 01:15:42,550 - INFO - 🏆 Saved best model checkpoint: checkpoints/checkpoint_best.pth
+2025-11-02 01:15:42,550 - INFO - 💾 Saved checkpoint: checkpoints/checkpoint_latest.pth
+2025-11-02 01:15:42,551 - INFO - Epoch 1/100 Summary:
+2025-11-02 01:15:42,551 - INFO -   Train: Loss=4.9524, Top-1=15.55%, Top-5=35.59%
+2025-11-02 01:15:42,551 - INFO -   Val:   Loss=4.0367, Top-1=26.48%, Top-5=53.57%
+2025-11-02 01:15:42,551 - INFO -   Best:  Loss=4.0367, Top-1=26.48%
+2025-11-02 01:15:42,551 - INFO - --------------------------------------------------------------------------------

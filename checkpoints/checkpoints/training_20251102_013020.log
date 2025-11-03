@@ -1,0 +1,32 @@
+2025-11-02 01:30:20,321 - INFO - ================================================================================
+2025-11-02 01:30:20,322 - INFO - ImageNet Training on EC2 - Multi-GPU Setup
+2025-11-02 01:30:20,322 - INFO - ================================================================================
+2025-11-02 01:30:20,322 - INFO - Device: cuda:0
+2025-11-02 01:30:20,322 - INFO - Distributed: False, Rank: 0, World Size: 1
+2025-11-02 01:30:20,341 - INFO - CUDA Available: True, GPU Count: 1
+2025-11-02 01:30:21,246 - INFO - ✅ ImageNet dataset found at //lambda/nfs/ERAv4S09/ERAv4S9/data/imagenet1k
+   Train classes: 1000
+   Validation classes: 1000
+   Expected: 1000 classes each
+2025-11-02 01:30:21,247 - INFO - Dataset: Imagenet1K
+2025-11-02 01:30:21,247 - INFO - Batch size: 256
+2025-11-02 01:30:21,247 - INFO - Epochs: 100
+2025-11-02 01:30:21,247 - INFO - Learning rate: 0.04
+2025-11-02 01:30:21,247 - INFO - 📂 Loading Imagenet1K dataset from: //lambda/nfs/ERAv4S09/ERAv4S9/data...
+2025-11-02 01:30:57,824 - INFO - Training samples: 1159338
+2025-11-02 01:30:57,825 - INFO - Validation samples: 50000
+2025-11-02 01:30:57,825 - INFO - Batches per epoch: 4529
+2025-11-02 01:30:57,825 - INFO - 🤖 Creating ResNet50 model...
+2025-11-02 01:30:58,286 - INFO - 📦 Loading tiny_imagenet weights from: ./tiny_imagenet_stage_2/final_model.pth
+2025-11-02 01:30:58,433 - INFO -    Current model (ImageNet): 1000 classes
+2025-11-02 01:30:58,434 - INFO -    Pretrained model (Tiny ImageNet): 200 classes
+2025-11-02 01:30:58,434 - INFO -    ⚠️  Final layer size mismatch! Filtering out fc layer
+2025-11-02 01:30:58,442 - INFO -    ⚠️  Missing keys (expected for FC layer): 2
+2025-11-02 01:30:58,442 - INFO - ✅ Successfully loaded tiny_imagenet weights
+2025-11-02 01:30:58,443 - INFO - 🔍 Running Learning Rate Finder...
+2025-11-02 01:32:06,075 - INFO - ✅ LR Finder suggests max_lr = 0.053266
+2025-11-02 01:32:06,078 - INFO - 💡 Update your training command with: --lr 0.053266
+2025-11-02 01:32:06,085 - INFO -    Saved to: ./checkpoints/optimal_lr.txt
+2025-11-02 01:32:06,085 - INFO -    Using suggested LR: 0.053266 for training
+2025-11-02 01:32:06,086 - INFO - 🚀 Starting training...
+2025-11-02 01:32:06,086 - INFO -    Start epoch: 0, Total epochs: 100
