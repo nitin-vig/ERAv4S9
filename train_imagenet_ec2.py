@@ -464,7 +464,8 @@ def main():
     # Override config if provided
     if args.batch_size:
         Config.BATCH_SIZE = args.batch_size
-    if args.epochs:
+    # Epochs override is handled in quick-fix block below (to avoid conflicts)
+    if args.epochs and not args.quick_fix_labels:
         Config.NUM_EPOCHS = args.epochs
     
     dataset_config = Config.get_dataset_config(args.dataset)
@@ -608,9 +609,8 @@ def main():
             logger.info("   This will fix label mapping issues quickly")
         # Force freeze backbone and set epochs
         args.freeze_backbone = True
-        Config.NUM_EPOCHS = args.fix_epochs
-        if args.epochs:
-            Config.NUM_EPOCHS = args.epochs
+        # Use epochs if provided, otherwise use fix_epochs default
+        Config.NUM_EPOCHS = args.epochs if args.epochs else args.fix_epochs
         if (not is_distributed) or (is_distributed and rank == 0):
             logger.info(f"   Epochs: {Config.NUM_EPOCHS}")
             logger.info(f"   Backbone: Frozen (only FC layer will train)")
