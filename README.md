@@ -226,15 +226,7 @@ from enhanced_progressive_training import run_enhanced_progressive_training
 run_enhanced_progressive_training()
 ```
 
-### 4. Compare Strategies
-```python
-from strategy_comparison import main
-
-# Compare different optimizer and scheduler strategies
-main()
-```
-
-### 5. Standard Progressive Training
+### 4. Standard Progressive Training
 ```python
 from progressive_training_strategy import ProgressiveTrainingStrategy, DatasetManager
 
@@ -249,7 +241,7 @@ dataset_loaders = dataset_manager.load_all_datasets()
 training_history = strategy.progressive_train(dataset_loaders)
 ```
 
-### 6. Analyze Results
+### 5. Analyze Results
 ```python
 # Generate enhanced visualizations
 strategy.plot_enhanced_metrics()
@@ -258,22 +250,52 @@ strategy.plot_enhanced_metrics()
 strategy.generate_enhanced_report()
 ```
 
+## 📊 Training Charts
+
+Visual representations of training progress across all stages:
+
+### Stage 1: ImageNette
+![ImageNette Training Metrics](imagenette_stage_1/training_metrics.png)
+- **Training Duration**: 20 epochs
+- **Final Train Accuracy**: 85.43%
+- **Final Test Accuracy**: 76.54%
+
+### Stage 2: Tiny ImageNet
+![Tiny ImageNet Training Metrics](tiny_imagenet_stage_2/training_metrics%20(1).png)
+- **Training Duration**: 50 epochs
+- **Final Train Accuracy**: 75.64%
+- **Final Test Accuracy**: 57.45%
+
+### Stage 3: ImageNet-1k
+![ImageNet-1k Training Metrics](imagenet1k_stage_3/training_metrics.png)
+- **Training Duration**: 100 epochs (~24 hours)
+- **Final Train Accuracy**: 96.38% (Top-1), 99.72% (Top-5)
+- **Final Validation Accuracy**: 74.29% (Top-1), 91.73% (Top-5)
+- **Best Validation Accuracy**: 74.15% (Top-1), 91.80% (Top-5)
+
+The chart shows comprehensive training visualization including:
+- Loss curves (Train vs Validation) over 100 epochs
+- Top-1 Accuracy progression
+- Top-5 Accuracy progression
+- Zoomed views for better detail of final training phase
+
 ## 📁 Output Structure
 
 ```
-enhanced_models/
-├── best_imagenette.pth          # Best model from Stage 1 (One Cycle LR)
-├── best_tiny_imagenet.pth       # Best model from Stage 2 (Cosine Warmup)
-├── best_imagenet_mini.pth       # Best model from Stage 3 (Polynomial Decay)
-├── best_imagenet.pth            # Best model from Stage 4 (Exponential Warmup)
-├── final_imagenette.pth         # Final model from Stage 1
-├── final_tiny_imagenet.pth      # Final model from Stage 2
-├── final_imagenet_mini.pth      # Final model from Stage 3
-├── final_imagenet.pth           # Final model from Stage 4
-├── training_history.json        # Complete training metrics
-├── enhanced_training_metrics.png # Advanced training visualization
-├── enhanced_training_report.txt  # Comprehensive report with optimizer/scheduler analysis
-└── optimizer_scheduler_comparison.png # Strategy comparison visualization
+├── imagenette_stage_1/
+│   ├── training_metrics.png     # Stage 1 training charts
+│   └── metrics.json             # Stage 1 metrics
+├── tiny_imagenet_stage_2/
+│   ├── training_metrics (1).png # Stage 2 training charts
+│   └── metrics.json             # Stage 2 metrics
+├── imagenet1k_stage_3/
+│   └── training_metrics.png     # Stage 3 training charts (generated)
+├── checkpoints/
+│   ├── checkpoint_best.pth      # Best model checkpoint
+│   ├── checkpoint_latest.pth    # Latest checkpoint
+│   └── training_20251102_014029.log  # Training log
+├── training_20251102_014029.log # Full training log (root copy)
+└── create_imagenet1k_charts.py  # Script to generate ImageNet1k charts
 ```
 
 ## 🔧 Customization Options
