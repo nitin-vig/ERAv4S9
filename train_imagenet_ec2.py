@@ -719,12 +719,33 @@ def main():
     best_test_loss = float('inf')
     best_test_accuracy = 0.0
     if args.resume:
-        checkpoint, start_epoch = load_checkpoint(
+        checkpoint, loaded_epoch = load_checkpoint(
             model, optimizer, scheduler, args.resume, device, logger
         )
         if checkpoint:
             best_test_loss = checkpoint.get('loss', float('inf'))
             best_test_accuracy = checkpoint.get('accuracy', 0.0)
+            # For quick-fix mode, reset start_epoch to 0 to retrain FC layer from scratch
+            # Otherwise, resume from the loaded epoch
+            if args.quick_fix_labels:
+                start_epoch = 0
+                if (not is_distributed) or (is_distributed and rank == 0):
+                    logger.info(f"   Quick-fix mode: Resetting epoch to 0 (will retrain FC for {Config.NUM_EPOCHS} epochs)")
+            else:
+                start_epoch = loaded_epoch
+    
+    # Freeze backbone layers if quick-fix mode (after checkpoint load to preserve weights)
+    if args.quick_fix_labels:
+        # Get base model (unwrap DataParallel/DistributedDataParallel if needed)
+        base_model = model.module if isinstance(model, (DataParallel, DistributedDataParallel)) else model
+        # Freeze all layers except FC
+        for name, param in base_model.named_parameters():
+            if 'fc' not in name:  # Keep FC layer trainable
+                param.requires_grad = False
+        if (not is_distributed) or (is_distributed and rank == 0):
+            frozen_params = sum(1 for p in base_model.parameters() if not p.requires_grad)
+            trainable_params = sum(1 for p in base_model.parameters() if p.requires_grad)
+            logger.info(f"   Frozen {frozen_params} parameters, {trainable_params} trainable (FC layer only)")
     
     if (not is_distributed) or (is_distributed and rank == 0):
         logger.info("🚀 Starting training...")
