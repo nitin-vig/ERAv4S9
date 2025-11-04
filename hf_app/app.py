@@ -61,6 +61,10 @@ def load_imagenet_labels() -> Optional[List[str]]:
     """
     Attempt to load ImageNet class names. 
     Priority: local json → local text → remote fetch → None.
+    Handles multiple JSON formats:
+    - [synset_id, class_name] -> uses class_name
+    - [class_name, class_name] -> uses class_name
+    - [class_name] -> uses class_name
     """
     # Prefer local hf_app JSON mapping first
     local_json = str(BASE_DIR / "imagenet_class_index.json")
@@ -68,21 +72,41 @@ def load_imagenet_labels() -> Optional[List[str]]:
         try:
             with open(local_json, "r") as f:
                 idx_map = json.load(f)
-            labels = [idx_map[str(i)][1] for i in range(len(idx_map))]
+            
+            labels = []
+            for i in range(len(idx_map)):
+                entry = idx_map.get(str(i))
+                if isinstance(entry, list) and len(entry) > 0:
+                    # If entry[0] is a synset ID (starts with 'n'), use entry[1] as class name
+                    # Otherwise, use entry[0] as class name
+                    if len(entry) >= 2 and entry[0].startswith('n') and len(entry[0]) == 9:
+                        # Format: [synset_id, class_name]
+                        labels.append(entry[1])
+                    else:
+                        # Format: [class_name, ...] or [class_name]
+                        labels.append(entry[0])
+                else:
+                    # Fallback to synset ID or class index
+                    labels.append(f"class_{i}")
+            
+            logger.info(f"Loaded {len(labels)} class labels from {local_json}")
             return labels
         except Exception as e:
             logger.warning(f"Failed reading {local_json}: {e}")
+    
     # Fallback to local text
     local_txt = str(BASE_DIR / "imagenet_classes.txt")
     if os.path.exists(local_txt):
         try:
             with open(local_txt, "r") as f:
                 labels = [line.strip() for line in f if line.strip()]
+            logger.info(f"Loaded {len(labels)} class labels from {local_txt}")
             return labels
         except Exception as e:
             logger.warning(f"Failed reading {local_txt}: {e}")
+    
     # Remote fallback
-
+    logger.warning("No ImageNet labels found")
     return None
 
 # ----------------------------
