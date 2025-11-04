@@ -401,6 +401,10 @@ def main():
                        help='Run LR finder before training to find optimal learning rate')
     parser.add_argument('--skip-dataset-check', action='store_true',
                        help='Skip dataset existence check')
+    parser.add_argument('--quick-fix-labels', action='store_true',
+                       help='Quick fix: Retrain only FC layer with correct labels (freezes backbone, sets epochs to 5). Use with --resume to fix existing model.')
+    parser.add_argument('--fix-epochs', type=int, default=5,
+                       help='Number of epochs for quick fix (default: 5, only used with --quick-fix-labels)')
     
     args = parser.parse_args()
     
@@ -597,6 +601,25 @@ def main():
     model = get_model(model_name='resnet50', dataset_name=args.dataset, num_classes=num_classes)
     model = model.to(device)
     
+    # Quick fix labels mode: Override settings for fast FC-only retraining
+    if args.quick_fix_labels:
+        if (not is_distributed) or (is_distributed and rank == 0):
+            logger.info("🔧 Quick Fix Labels Mode: Retraining FC layer only")
+            logger.info("   This will fix label mapping issues quickly")
+        # Force freeze backbone and set epochs
+        args.freeze_backbone = True
+        Config.NUM_EPOCHS = args.fix_epochs
+        if args.epochs:
+            Config.NUM_EPOCHS = args.epochs
+        if (not is_distributed) or (is_distributed and rank == 0):
+            logger.info(f"   Epochs: {Config.NUM_EPOCHS}")
+            logger.info(f"   Backbone: Frozen (only FC layer will train)")
+        # Use higher LR for FC-only training
+        if args.lr is None:
+            max_lr = dataset_config.get('lr', Config.LEARNING_RATE) * 10  # Higher LR for FC-only
+            if (not is_distributed) or (is_distributed and rank == 0):
+                logger.info(f"   Learning rate: {max_lr:.6f} (10x default for FC-only training)")
+    
     # Load tiny_imagenet weights if not resuming
     start_epoch = 0
     if args.resume is None and os.path.exists(args.tiny_imagenet_weights):
@@ -607,8 +630,9 @@ def main():
             logger.warning(f"⚠️  Tiny ImageNet weights not found: {args.tiny_imagenet_weights}")
             logger.warning("   Training from scratch")
     
-    # Initialize max_lr variable
-    max_lr = args.lr if args.lr else dataset_config.get('lr', Config.LEARNING_RATE)
+    # Initialize max_lr variable (if not set by quick-fix)
+    if 'max_lr' not in locals():
+        max_lr = args.lr if args.lr else dataset_config.get('lr', Config.LEARNING_RATE)
     
     # Run LR finder if requested
     optimal_lr = None
@@ -755,9 +779,15 @@ def main():
     cleanup_distributed()
     
     if (not is_distributed) or (is_distributed and rank == 0):
-        logger.info("✅ Training completed!")
-        logger.info(f"Best validation loss: {best_test_loss:.4f}")
-        logger.info(f"Best validation accuracy: {best_test_accuracy:.2f}%")
+        if args.quick_fix_labels:
+            logger.info("✅ Quick Fix Labels completed!")
+            logger.info(f"   Model FC layer retrained with correct labels")
+            logger.info(f"   Best validation accuracy: {best_test_accuracy:.2f}%")
+            logger.info(f"   Checkpoint saved with correct class mapping: {args.checkpoint_dir}/checkpoint_best.pth")
+        else:
+            logger.info("✅ Training completed!")
+            logger.info(f"Best validation loss: {best_test_loss:.4f}")
+            logger.info(f"Best validation accuracy: {best_test_accuracy:.2f}%")
 
 
 if __name__ == '__main__':
