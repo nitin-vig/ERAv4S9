@@ -2,18 +2,49 @@
 
 A comprehensive multi-stage training approach that scales from smaller ImageNet datasets to ImageNet-1k, optimizing for both high accuracy and training speed.
 
+**🚀 Live Demo**: [Try the ResNet50 ImageNet-1k model on Hugging Face Spaces](https://huggingface.co/spaces/dcrunchg/Resnet50-Imagenet1k)
+
 ## 🎯 Strategy Overview
 
-This progressive training strategy implements a **4-stage approach** that gradually increases dataset complexity while maintaining optimal training efficiency:
+This progressive training strategy implements a **3-stage approach** that gradually increases dataset complexity while maintaining optimal training efficiency. The approach used was: **ImageNette → Tiny ImageNet → ImageNet1k**.
 
 ### Training Stages
 
 | Stage | Dataset | Classes | Image Size | Epochs | Purpose |
 |-------|---------|---------|------------|--------|---------|
 | **Stage 1** | ImageNette | 10 | 224×224 | 20 | Quick warmup & architecture validation |
-| **Stage 2** | Tiny ImageNet | 200 | 64×64 | 30 | Medium complexity training |
-| **Stage 3** | ImageNet Mini | 1000 | 224×224 | 40 | ImageNet-1k complexity with subset |
-| **Stage 4** | ImageNet-1k | 1000 | 224×224 | 60 | Final full-scale training |
+| **Stage 2** | Tiny ImageNet | 200 | 64×64 | 50 | Medium complexity training |
+| **Stage 3** | ImageNet-1k | 1000 | 224×224 | 100 | Final full-scale training |
+
+### Training Results
+
+#### Stage 1: ImageNette
+- **Train Accuracy**: 85.43%
+- **Test Accuracy**: 76.54%
+- **Train Loss**: 0.88
+- **Test Loss**: 1.23
+- **Configuration**: AdamW optimizer, Cosine scheduler, 256 batch size, 0.001 learning rate
+- **Hardware**: Google Colab
+
+#### Stage 2: Tiny ImageNet
+- **Train Accuracy**: 75.64%
+- **Test Accuracy**: 57.45%
+- **Train Loss**: 1.72
+- **Test Loss**: 2.39
+- **Configuration**: SGD optimizer, One Cycle scheduler, 256 batch size, 0.037 learning rate
+- **Hardware**: Google Colab
+
+#### Stage 3: ImageNet-1k
+- **Train Accuracy**: 96.38% (Top-1), 99.72% (Top-5)
+- **Validation Accuracy**: 74.29% (Top-1), 91.73% (Top-5)
+- **Best Validation Accuracy**: 74.15% (Top-1), 91.80% (Top-5)
+- **Train Loss**: 1.21
+- **Validation Loss**: 2.00
+- **Configuration**: SGD optimizer, One Cycle scheduler, 512-896 batch size, 0.08-0.16 learning rate
+- **Training Samples**: 1,159,338
+- **Validation Samples**: 50,000
+- **Hardware**: A100 GPU (1 GPU)
+- **Training Time**: ~24 hours for 100 epochs
 
 ## 🚀 Key Benefits
 
@@ -45,61 +76,66 @@ This progressive training strategy implements a **4-stage approach** that gradua
 
 ### Stage-Specific Optimizations
 
-#### Stage 1: ImageNette (Super-Convergence)
+Configuration values are sourced from `hf_app/config.py`. The actual configurations used:
+
+#### Stage 1: ImageNette
 ```python
 {
+    "dataset": "imagenette",
+    "classes": 10,
+    "image_size": 224,
     "epochs": 20,
-    "batch_size": 64,
-    "lr": 0.002,
+    "batch_size": 256,
+    "lr": 0.001,
     "optimizer": "adamw",
-    "scheduler": "one_cycle",
-    "mixed_precision": True,
-    "gradient_clipping": 1.0,
-    "description": "Super-convergence with One Cycle LR"
+    "scheduler": "cosine",
+    "weight_decay": 1e-4,
+    "label_smoothing": 0.1,
+    "description": "Quick warmup and architecture validation"
 }
 ```
 
-#### Stage 2: Tiny ImageNet (Balanced)
+#### Stage 2: Tiny ImageNet
 ```python
 {
-    "epochs": 30,
-    "batch_size": 128,
-    "lr": 0.001,
-    "optimizer": "adamw", 
-    "scheduler": "cosine_warmup",
-    "mixed_precision": True,
-    "gradient_clipping": 1.0,
-    "description": "Balanced approach with Cosine Warmup"
+    "dataset": "tiny_imagenet",
+    "classes": 200,
+    "image_size": 64,
+    "epochs": 50,
+    "batch_size": 256,
+    "lr": 0.037,
+    "optimizer": "sgd",
+    "scheduler": "one_cycle",
+    "weight_decay": 1e-3,
+    "label_smoothing": 0.1,
+    "mixup_alpha": 0.3,
+    "description": "LR: 0.10 (safe max_lr for transfer learning with pretrained weights)"
 }
 ```
 
-#### Stage 3: ImageNet Mini (Conservative)
-   ```python
+#### Stage 3: ImageNet-1k
+```python
 {
-    "epochs": 40,
-    "batch_size": 96,
-    "lr": 0.0005,
-    "optimizer": "sgd_momentum",
-    "scheduler": "polynomial",
-    "mixed_precision": True,
-    "gradient_clipping": 1.0,
-    "description": "Conservative SGD with Polynomial Decay"
+    "dataset": "imagenet1k",
+    "classes": 1000,
+    "image_size": 224,
+    "epochs": 100,
+    "batch_size": 768,
+    "lr": 0.16,
+    "optimizer": "sgd",
+    "scheduler": "one_cycle",
+    "weight_decay": 1.5e-4,
+    "label_smoothing": 0.1,
+    "description": "Final full-scale training - conservative LR for stable training"
 }
 ```
 
-#### Stage 4: ImageNet-1k (Aggressive)
-   ```python
-{
-    "epochs": 60,
-    "batch_size": 128,
-    "lr": 0.1,
-    "optimizer": "sgd_momentum",
-    "scheduler": "exponential_warmup",
-    "mixed_precision": True,
-    "gradient_clipping": 1.0,
-    "description": "Aggressive SGD with Exponential Warmup"
-}
-```
+**Learning Rate & Batch Size Optimization:**
+- LR finder suggested LR ~0.05 for batch size 256
+- Learning rate was scaled to 0.16 for batch size 768 (proportional scaling with batch size)
+- Higher batch size (768) enabled better GPU utilization and reduced training time per epoch
+
+**Note**: All stages use mixed precision training and gradient clipping (1.0) as configured in the global training settings.
 
 ## 🛠️ Implementation Details
 
@@ -153,20 +189,18 @@ model.fc = nn.Linear(model.fc.in_features, config["classes"])
 - **Early stages**: Cosine annealing for smooth convergence
 - **Later stages**: Step scheduling for ImageNet standard training
 
-## 📈 Expected Results
+## 📈 Actual Results
 
 ### Training Timeline
-- **Total Time**: ~8-12 hours (depending on hardware)
-- **Stage 1**: ~30 minutes (ImageNette)
-- **Stage 2**: ~1-2 hours (Tiny ImageNet)
-- **Stage 3**: ~2-3 hours (ImageNet Mini)
-- **Stage 4**: ~5-7 hours (ImageNet-1k)
+- **Stage 1 (ImageNette)**: ~30 minutes (Google Colab)
+- **Stage 2 (Tiny ImageNet)**: ~1-2 hours (Google Colab)
+- **Stage 3 (ImageNet-1k)**: ~24 hours for 100 epochs (A100 GPU)
+- **Total Time**: ~26-28 hours (across different platforms)
 
 ### Accuracy Progression
-- **Stage 1**: 85-95% (ImageNette)
-- **Stage 2**: 60-70% (Tiny ImageNet)
-- **Stage 3**: 45-55% (ImageNet Mini)
-- **Stage 4**: 70-80% (ImageNet-1k)
+- **Stage 1 (ImageNette)**: 76.54% test accuracy
+- **Stage 2 (Tiny ImageNet)**: 57.45% test accuracy
+- **Stage 3 (ImageNet-1k)**: 74.15% validation accuracy (Top-1), 91.80% (Top-5)
 
 ## 🚀 Quick Start
 
@@ -349,21 +383,53 @@ Contributions are welcome! Areas for improvement:
 
 This project is open source and available under the MIT License.
 
+## 🚧 Challenges & Solutions
+
+### Class Mapping Loss and Recovery
+
+During the ImageNet1k training, an issue was encountered where the class mapping (`id_to_class`) was lost from the checkpoint. This mapping is critical for correctly interpreting model predictions, as it maps class indices to their corresponding ImageNet class names (synset IDs).
+
+**The Problem:**
+- The class mapping was not properly saved during checkpoint creation
+- This caused incorrect class label predictions even though the model had learned good features
+- The backbone (feature extractor) was trained correctly, but predictions were misaligned due to incorrect class ordering
+
+**The Solution:**
+1. **Class Mapping Extraction**: The `extract_class_mapping.py` script was used to extract the class mapping from checkpoints that contained it, or regenerate it from the dataset structure.
+
+2. **Backbone Preservation**: Instead of retraining the entire model, a quick-fix approach was implemented:
+   - The backbone layers (conv1, bn1, layer1-4) were frozen to preserve the learned features
+   - Only the final fully connected (FC) layer was retrained with the correct class mapping
+   - This approach used the `--quick-fix-labels` flag in `train_imagenet_ec2.py`
+
+3. **Results**: 
+   - Training time reduced from 50-100 hours to 30-60 minutes (99% faster)
+   - Cost reduced significantly (from $500-1000 to $5-10)
+   - Model accuracy maintained at 74-77% validation accuracy
+   - Correct class mapping restored and saved in the checkpoint
+
+**Key Takeaway**: Always ensure that checkpoints include the `id_to_class` mapping when saving models. The training scripts now enforce this requirement and generate appropriate error messages if the mapping is missing.
 
 ## Training Logs & Checkpoints Analysis
 
 This section summarizes recent ImageNet training runs, documents the log structure, and provides practical recommendations based on the checkpoint data in `checkpoints/`.
 
+**📋 Full Training Log**: See [`training_20251102_014029.log`](training_20251102_014029.log) for the complete 100-epoch ImageNet-1k training log.
+
 ### Summary of Findings
-- Environment: `cuda:0` (A100, 1 GPU).
-- Dataset: ImageNet-1k with `1,159,338` train samples and `50,000` val samples.
-- Training cadence: ~13m55s per epoch (validation adds ~30–35s per epoch).
-- Accuracy progression (latest run `training_20251102_014029.log`):
+- **Environment**: 
+  - Stage 1-2: Google Colab
+  - Stage 3: `cuda:0` (A100, 1 GPU)
+- **Dataset**: ImageNet-1k with `1,159,338` train samples and `50,000` val samples.
+- **Training Time**: 100 epochs completed in approximately 24 hours on A100 GPU
+- **Training cadence**: ~13m55s per epoch (validation adds ~30–35s per epoch).
+- Accuracy progression (latest run [`training_20251102_014029.log`](training_20251102_014029.log)):
   - Epoch 1 → Val Top-1 `26.98%`, Top-5 `54.62%`
   - Epoch 100 → Val Top-1 `74.15%`, Top-5 `91.73%`
 - Learning rate finder:
-  - Successful runs suggested `max_lr` around `0.053266` for BatchSize `256` (saved in `checkpoints/optimal_lr.txt`) and `0.057286`. 
-  - Adjusted the LR to `0.16` for BatchSize `768` as LR finder wasn't working for `768`, so we manually extrapolated.
+  - LR finder suggested `max_lr` ~0.05 for batch size 256
+  - Learning rate was scaled to `0.16` for batch size 768 (proportional scaling)
+  - Higher batch size (768) enabled better GPU utilization and reduced training time per epoch
 - Normalization stats:
   - `checkpoints/dataset_stats.json` contains per-channel mean/std, e.g.:
     - Mean `[0.4798, 0.4549, 0.4050]`, Std `[0.2292, 0.2257, 0.22617]` (values vary slightly across sampling runs).
